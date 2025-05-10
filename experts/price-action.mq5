@@ -15,8 +15,8 @@ void OnTick()
 {
    int bars = 180;  
    datetime last_time = 0;
-   WriteCandle("candle-m15.txt", PERIOD_M15, 180, 0);
    WriteCandle("candle-m5.txt", PERIOD_M5, 180, 0);
+   WriteCandle("candle-m1.txt", PERIOD_M1, 180, 0);
 }
 
 void OnTimer()
@@ -47,9 +47,9 @@ void OnTimer()
                   ushort u_sep=StringGetCharacter("-",0);
                   StringSplit("" + lines[i], u_sep, data);
                   long chart_id = ChartID();
-                  ENUM_TIMEFRAMES time_frame = PERIOD_M15;
-                  if(data[1] == "m5") {
-                     time_frame = PERIOD_M5;
+                  ENUM_TIMEFRAMES time_frame = PERIOD_M5;
+                  if(data[1] == "m1") {
+                     time_frame = PERIOD_M1;
                   }
                   ChartSetSymbolPeriod(chart_id, Symbol(), time_frame); 
                   Sleep(1000);              
@@ -61,9 +61,9 @@ void OnTimer()
                   ushort u_sep=StringGetCharacter("-",0);
                   StringSplit("" + lines[i], u_sep, data);
                   long chart_id = ChartID();
-                  ENUM_TIMEFRAMES time_frame = PERIOD_M15;
-                  if(data[1] == "m5") {
-                     time_frame = PERIOD_M5;
+                  ENUM_TIMEFRAMES time_frame = PERIOD_M5;
+                  if(data[1] == "m1") {
+                     time_frame = PERIOD_M1;
                   }
                   ChartSetSymbolPeriod(chart_id, Symbol(), time_frame);
                   Sleep(1000);             
@@ -81,8 +81,8 @@ void OnTimer()
                   datetime timestamp1 = StringToInteger(data[3]);
                   datetime timestamp2 = StringToInteger(data[4]);
                   string name = data[0] + "-" + data[1] + "-" +data[2] + "-" +data[3] + "-" +data[4] + "-" +data[5] + "-" + data[6];
-                  DrawRectangle(chart_id, name, timestamp1 + PeriodSeconds(PERIOD_M15) * 10, price1, timestamp2 + PeriodSeconds(PERIOD_M15) * 10, price2, clrTomato, StringToColor(data[7]));
-                  DrawText(chart_id, "text-" + name, data[ArraySize(data) - 1], timestamp2 + PeriodSeconds(PERIOD_M15), price1 > price2 ? price1: price2, clrRed, 40);
+                  DrawRectangle(chart_id, name, timestamp1 + PeriodSeconds(PERIOD_M5) * 10, price1, timestamp2 + PeriodSeconds(PERIOD_M5) * 10, price2, clrTomato, StringToColor(data[7]));
+                  //DrawText(chart_id, "text-" + name, data[ArraySize(data) - 1], timestamp2 + PeriodSeconds(PERIOD_M15), price1 > price2 ? price1: price2, clrRed, 40);
                }
                
                
@@ -96,7 +96,7 @@ void OnTimer()
                   double price2 = StringToDouble(data[2]);
                   datetime timestamp1 = StringToInteger(data[3]);
                   datetime timestamp2 = StringToInteger(data[4]);
-                  DrawRectangle(chart_id,  data[0] + "-" + data[1] + "-" +data[2] + "-" +data[3] + "-" +data[4] + "-" +data[5] + "-" + data[6], timestamp1 + PeriodSeconds(PERIOD_M15) * 10, price1, timestamp2 + PeriodSeconds(PERIOD_M15) * 10, price2, clrLimeGreen, StringToColor(data[7]));
+                  DrawRectangle(chart_id,  data[0] + "-" + data[1] + "-" +data[2] + "-" +data[3] + "-" +data[4] + "-" +data[5] + "-" + data[6], timestamp1 + PeriodSeconds(PERIOD_M5) * 10, price1, timestamp2 + PeriodSeconds(PERIOD_M5) * 10, price2, clrLimeGreen, StringToColor(data[7]));
                }
                
                //--- draw trendline
@@ -125,12 +125,12 @@ void OnTimer()
                         double price1 = StringToDouble(data[i]);
                         double price2 = StringToDouble(data[i + 1]);
                         if(i + 1 == ArraySize(data) - 1) {
-                           DrawTrendlineArrow(chart_id,  data[0] + "-" + timestamp + data[i], timestamp, price1, timestamp + (PeriodSeconds(PERIOD_M15) * 3), price2);
+                           DrawTrendlineArrow(chart_id,  data[0] + "-" + timestamp + data[i], timestamp, price1, timestamp + (PeriodSeconds(PERIOD_M5) * 3), price2);
                         } else {
-                           DrawTrendline(chart_id,  data[0] + "-" + timestamp + data[i], timestamp, price1, timestamp + (PeriodSeconds(PERIOD_M15) * 3), price2);
+                           DrawTrendline(chart_id,  data[0] + "-" + timestamp + data[i], timestamp, price1, timestamp + (PeriodSeconds(PERIOD_M5) * 3), price2);
                         }
                         
-                        timestamp += (PeriodSeconds(PERIOD_M15) * 3);
+                        timestamp += (PeriodSeconds(PERIOD_M5) * 3);
                      }
                   } 
                }

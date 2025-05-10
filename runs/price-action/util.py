@@ -219,11 +219,12 @@ def generate_result_future(old_candles, old_candles2, time_frame, time_frame2, s
     `future-<price1>-<price2>-<price3>-...-<priceN>-<lý do dài từ 150 tới 300 ký tự, trả lời bằng tiếng anh, nêu lý do sao cho hay để tôi có thể generate ra voice để đăng lên youtube>
 
     ### Yêu cầu bắt buộc:
-    - nếu price1 của fibonacci < price2 của fiboonacci thì phân tích theo xu hướng tăng.
-    - nếu price1 của fibonacci > price2 của fiboonacci thì phân tích theo xu hướng giảm.
+    - price1 phải bắt đầu từ giá hiện tại là {old_candles[old_candles.__len__() - 1]['close']}.
     - phải có nhiều điểm giá để vẽ ZigZag.
     - Phải có ít nhất 4 điểm giá (price1 đến price4 trở lên) để có thể vẽ ZigZag.
     - Các điểm giá nên dao động lên xuống để phản ánh xu hướng thị trường.
+    - nếu price1 của fibonacci < price2 của fiboonacci thì phân tích theo xu hướng tăng.
+    - nếu price1 của fibonacci > price2 của fiboonacci thì phân tích theo xu hướng giảm.
     - bắt buộc phải cung cấp thông tin cho tôi, bao gồm:
     - cân nhắc kĩ trước khi đưa ra quyết định.
     - kết quả phải hợp lý và tiềm năng.
@@ -243,7 +244,8 @@ def generate_result_future(old_candles, old_candles2, time_frame, time_frame2, s
     final_prompt = f"""{old_candles} Đây là dữ liệu nến của {symbol} với khung thời gian {time_frame} phút. {old_candles2} Đây là dữ liệu nến của {symbol} với khung thời gian {time_frame2} phút. support and resistance: {suport_resitances} {suport_resitances2}. thông tin của fibonacci: {fibonacci}.
     thông tin dự đoán tương lai giá sẽ đi: {prompts}.
     Hãy lọc ra 1 dự đoán nào tiềm năng, lặp lại nhiều và hợp lý nhất và có thể dựa vào đó để trade trong các gợi ý trên. trả ra đúng định dạng:
-    future-{old_candles[old_candles.__len__() - 1]['close']}-<price2>-<price3>-...-<priceN>-<lý do, lấy lại lý do mà tôi đã cung cấp>.
+    future-<price1>-<price2>-<price3>-...-<priceN>-<lý do, lấy lại lý do mà tôi đã cung cấp>.
+    price1 phải bắt đầu từ giá hiện tại là {old_candles[old_candles.__len__() - 1]['close']}.
     Không thêm bất kỳ lời giải thích hay chú thích nào khác.
     """
 
@@ -484,12 +486,13 @@ def concat_videos_ffmpeg(intro_path, video_paths, output_path):
         print("Danh sách video rỗng.")
         return
 
-    # Tạo video intro chuẩn hóa tạm thời
-    normalized_intro_path = "normalized_intro.mp4"
-    normalize_video(intro_path, normalized_intro_path)
+    # # Tạo video intro chuẩn hóa tạm thời
+    # normalized_intro_path = "normalized_intro.mp4"
+    # normalize_video(intro_path, normalized_intro_path)
 
     # Danh sách video đã chuẩn hóa (gồm intro + các video chính)
-    all_videos = [normalized_intro_path] + video_paths
+    # all_videos = [normalized_intro_path] + video_paths
+    all_videos = [] + video_paths
 
     # Tạo file input.txt
     with open("input.txt", "w", encoding="utf-8") as f:
@@ -516,8 +519,8 @@ def concat_videos_ffmpeg(intro_path, video_paths, output_path):
     finally:
         if os.path.exists("input.txt"):
             os.remove("input.txt")
-        if os.path.exists(normalized_intro_path):
-            os.remove(normalized_intro_path)
+        # if os.path.exists(normalized_intro_path):
+        #     os.remove(normalized_intro_path)
 
 
 def create_rounded_mask(size, radius):
@@ -594,7 +597,7 @@ def update_thumbnail(
             rounded_mask = create_rounded_mask(right_top_half.size, radius=30)
             combined.paste(right_top_half, (540, 50), rounded_mask)
         # Lưu kết quả
-        combined.convert("RGB").save(output_path)
+        combined.convert("RGB").save(output_path, format="JPEG", optimize=True)
         print(f"[✓] Đã lưu ảnh ra: {output_path}")
 
     except Exception as e:
