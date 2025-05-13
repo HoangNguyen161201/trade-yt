@@ -20,10 +20,12 @@ symbol = 'AUDUSDm'
 # files path
 folder_path = r'C:\Users\hoang\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
 txt_path = folder_path + r'\price-action.txt'
-info_candle_m15_path = folder_path + r'\candle-m15.txt'
-info_candle_m5_path = folder_path + r'\candle-m5.txt'
+info_candle_m15_path = folder_path + r'\candle-m5.txt'
+info_candle_m5_path = folder_path + r'\candle-m1.txt'
 picture1_path = folder_path + r'\picture1.png'
 picture2_path = folder_path + r'\picture2.png'
+
+
 
 def main():
     while True:
@@ -38,8 +40,9 @@ def main():
             
             # chuẩn bị content
             # chuẩn bị content để upload video
-            time_thumbnail = format_utc_time_range(int(old_candles_m5[old_candles_m5.__len__() - 1]['time']))
-            title = f'GOLD BUY OR SELL? GOLD/XAUUSD 4H FORECAST | price action | {time_thumbnail}'
+            time_thumbnail = format_utc_time_range()
+            print('nguyen quang hoang', time_thumbnail)
+            title = f'GOLD BUY OR SELL? GOLD/XAUUSD WEEKLY FORECAST | price action | {time_thumbnail}'
             title_slug = slugify(str(title))
             description=''
             tags=''
@@ -57,12 +60,12 @@ def main():
 
             start_time = time.time()
             with ProcessPoolExecutor() as executor:
-                future_m15 = executor.submit(generate_support_resistance, old_candles_m15, '15 phút', current_candle_m15['low'], current_candle_m15['high'], gemini_keys[0], symbol)
-                future_m5 = executor.submit(generate_support_resistance, old_candles_m5, '5 phút', current_candle_m5['low'], current_candle_m5['high'], gemini_keys[1], symbol)
-                future_trend_line = executor.submit(generate_trendline, old_candles_m15, '15 phút', gemini_keys[2], symbol)
-                intro = executor.submit(generate_introduce_content, symbol, "15 phút", "5 phút", "FX MIND - READING", gemini_keys[3])
-                description_generate = executor.submit(generate_content,f'tôi đang có title là: {title}, tôi đang tạo ra video phân tích trade và đưa ra xu hướng trade tương lai cho {symbol} với khung thời gian 15 phút và 5 phút. Hãy viết lại description bằng tiếng anh sao cho hay và nổi bật, chuẩn seo, có các hastag,... để cho tôi gắn vào phần mô tả cho video youtube của tôi. trả ra description cho tôi luôn, không cần phải ghi thêm gì hết.', gemini_keys[6])
-                tags_generate = executor.submit(generate_content,f'tôi đang có title là: {title}, tôi đang tạo ra video phân tích trade và đưa ra xu hướng trade tương lai cho {symbol} với khung thời gian 15 phút và 5 phút. Hãy cung cấp tags bằng tiếng anh chuẩn seo, nhiều người tìm kiếm trên youtube, không phải hastag, tag nào quan trọng phải được liệt kê trước, (các tag phải ngăn cách bằng dấu "," ví dụ tag1,tag2,tag3,...). để cho tôi gắn vào phần tags cho video youtube của tôi. trả ra tags cho tôi luôn, không cần phải ghi thêm gì hết.', gemini_keys[6])
+                future_m15 = executor.submit(generate_support_resistance, old_candles_m15, 'ngày', current_candle_m15['low'], current_candle_m15['high'], gemini_keys[0], symbol)
+                future_m5 = executor.submit(generate_support_resistance, old_candles_m5, '4 giờ', current_candle_m5['low'], current_candle_m5['high'], gemini_keys[1], symbol)
+                future_trend_line = executor.submit(generate_trendline, old_candles_m15, 'ngày', gemini_keys[2], symbol)
+                intro = executor.submit(generate_introduce_content, symbol, "ngày", "4 giờ", "FX MIND - READING", gemini_keys[3])
+                description_generate = executor.submit(generate_content,f'tôi đang có title là: {title}, tôi đang tạo ra video phân tích trade và đưa ra xu hướng trade tương lai cho {symbol} với khung thời gian ngày và 4 giờ. Hãy viết lại description bằng tiếng anh sao cho hay và nổi bật, chuẩn seo, có các hastag,... để cho tôi gắn vào phần mô tả cho video youtube của tôi. trả ra description cho tôi luôn, không cần phải ghi thêm gì hết.', gemini_keys[6])
+                tags_generate = executor.submit(generate_content,f'tôi đang có title là: {title}, tôi đang tạo ra video phân tích trade và đưa ra xu hướng trade tương lai cho {symbol} với khung thời gian ngày và 4 giờ. Hãy cung cấp tags bằng tiếng anh chuẩn seo, nhiều người tìm kiếm trên youtube, không phải hastag, tag nào quan trọng phải được liệt kê trước, (các tag phải ngăn cách bằng dấu "," ví dụ tag1,tag2,tag3,...). để cho tôi gắn vào phần tags cho video youtube của tôi. trả ra tags cho tôi luôn, không cần phải ghi thêm gì hết.', gemini_keys[6])
 
 
                 support_resistance_m15_content = future_m15.result()
@@ -116,15 +119,15 @@ def main():
             ]
         
             # tạo fibonacci
-            fibonacci = generate_fibonacci(old_candles_m5, '5 phút', support_resistance_m15_content + ". "+ support_resistance_m5_content, trend_line, gemini_keys[4], symbol)
+            fibonacci = generate_fibonacci(old_candles_m5, '4 giờ', support_resistance_m15_content + ". "+ support_resistance_m5_content, trend_line, gemini_keys[4], symbol)
             # tạo dự đoán tương lai
-            future_result = generate_result_future(old_candles_m15, old_candles_m5, "15 phút", "5 phút", support_resistance_m15_content, support_resistance_m5_content, trend_line, fibonacci, gemini_keys[5], gemini_keys[3], symbol)
+            future_result = generate_result_future(old_candles_m15, old_candles_m5, "ngày", "4 giờ", support_resistance_m15_content, support_resistance_m5_content, trend_line, fibonacci, gemini_keys[5], gemini_keys[3], symbol)
             future = extract_data_future_number_or_reason(future_result.strip(), f'future-{old_candles_m15[old_candles_m15.__len__() - 1]['time']}')
             future_reason = extract_data_future_number_or_reason(future_result, is_reason= True)
 
             # vẽ vào mql5 để xem trước
             with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(f'clear-m15\n')
+                f.write(f'clear-m5\n')
                 f.write(f'{trend_line}\n')
                 for item in datas:
                     f.write(f'{item}\n')
@@ -141,7 +144,7 @@ def main():
             if user_input == "1":
                 # truyền thông tin để vẽ vào mql5
                 with open(txt_path, 'w', encoding='utf-8') as f:
-                    f.write(f'clear-m15\n')
+                    f.write(f'clear-m5\n')
                     f.write(f'{trend_line}\n')
                     for item in datas:
                         f.write(f'{item}\n')
@@ -155,7 +158,7 @@ def main():
                         f.write(f'{item}-cancel\n')
                         index += 1
                     
-                    f.write(f'change-m5\n')
+                    f.write(f'change-m1\n')
                     for item in proof_m5:
                         f.write(f'{item}\n')
                         f.write(f'snapshort-picture{index}.png\n')
@@ -164,7 +167,7 @@ def main():
                     f.write(f'{fibonacci}\n')
                     f.write(f'snapshort-picture{index}.png\n')
                     index += 1
-                    f.write(f'change-m15\n')
+                    f.write(f'change-m5\n')
                     f.write(f'{future}\n')
                     f.write(f'snapshort-picture{index}.png\n')
                 

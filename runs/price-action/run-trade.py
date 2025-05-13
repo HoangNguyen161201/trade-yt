@@ -10,25 +10,23 @@ import os
 # info --------------------------------------------------------
 # account
 account = {
-    "passowrd": 'Cuem1612@',
-    "login": 79788688,
-    "server": 'Exness-MT5Trial8'
+    "passowrd": 'Cuem161201@',
+    "login": 77015891,
+    "server": 'RoboForex-ECN'
 }
 
-symbol = 'AUDJPYm'
+symbol = 'XAUUSDm'
 
 # files path
-folder_path = r'C:\Users\hoang\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
+folder_path = r'C:\Users\hoang\AppData\Roaming\MetaQuotes\Terminal\5FFA568149E88FCD5B44D926DCFEAA79\MQL5\Files'
 txt_path = folder_path + r'\price-action.txt'
 info_candle_m5_path = folder_path + r'\candle-m5.txt'
 info_candle_m1_path = folder_path + r'\candle-m1.txt'
-picture1_path = folder_path + r'\picture1.png'
-picture2_path = folder_path + r'\picture2.png'
 
 def main():
     while True:
         try:
-            connect_to_mt5(account['login'], account['passowrd'], account['server'], "C:/Program Files/MetaTrader 5 EXNESS/terminal64.exe")
+            connect_to_mt5(account['login'], account['passowrd'], account['server'], "C:/Program Files/RoboForex MT5 Terminal/terminal64.exe")
 
             # old candels
             old_candles_m5 = get_old_candels(info_candle_m5_path)
@@ -86,9 +84,9 @@ def main():
             ]
         
             # tạo fibonacci
-            fibonacci = generate_fibonacci(old_candles_m1, '1 phút', support_resistance_m5_content + ". "+ support_resistance_m1_content, trend_line, gemini_keys[4], symbol)
+            fibonacci = generate_fibonacci(old_candles_m1, '1 phút', support_resistance_m5_content + ". "+ support_resistance_m1_content, trend_line, gemini_keys[3], symbol)
             # tạo dự đoán tương lai
-            future_result = generate_result_future(old_candles_m5, old_candles_m1, "5 phút", "1 phút", support_resistance_m5_content, support_resistance_m1_content, trend_line, fibonacci, gemini_keys[5], gemini_keys[3], symbol)
+            future_result = generate_result_future(old_candles_m5, old_candles_m1, "5 phút", "1 phút", support_resistance_m5_content, support_resistance_m1_content, trend_line, fibonacci, gemini_keys[4], gemini_keys[5], symbol)
             future = extract_data_future_number_or_reason(future_result.strip(), f'future-{old_candles_m5[old_candles_m5.__len__() - 1]['time']}')
             future_reason = extract_data_future_number_or_reason(future_result, is_reason= True)
 

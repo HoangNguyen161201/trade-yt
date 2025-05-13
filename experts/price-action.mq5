@@ -236,7 +236,7 @@ void WriteCandle(string name_file, ENUM_TIMEFRAMES time_frame,  int bars, dateti
    for (int i = 0; i < bars; i++)
    {
       long timestamp = (long)rates[i].time;
-      string line = StringFormat("%lld-%.5f-%.5f-%.5f-%.5f-%.5f-%.5f-%.5f",
+      string line = StringFormat("%lld-%.5f-%.5f-%.5f-%.5f-%.5f-%.5f-%.5f-%.5f",
                                  timestamp,
                                  rates[i].open,
                                  rates[i].close,
@@ -244,7 +244,8 @@ void WriteCandle(string name_file, ENUM_TIMEFRAMES time_frame,  int bars, dateti
                                  rates[i].low,
                                  bb_upper[i],
                                  bb_middle[i],
-                                 bb_lower[i]);
+                                 bb_lower[i],
+                                 rates[i].tick_volume); // Thêm volume thực tế (real_volume)
       FileWrite(file_handle, line);
    }
 

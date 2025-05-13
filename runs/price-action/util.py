@@ -9,6 +9,7 @@ from moviepy import AudioFileClip, concatenate_videoclips, VideoFileClip, ImageC
 import azure.cognitiveservices.speech as speechsdk
 import subprocess
 from datetime import datetime, timedelta, timezone
+import pandas as pd
 
 import time
 from selenium.webdriver.common.keys import Keys
@@ -20,14 +21,23 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+# gemini_keys = [
+#     'AIzaSyA5Dhdav1JfroDhO5G6OVdzFATvYTXwNuM',
+#     'AIzaSyB2j_rHJOnMA9Zi7fziRd-ccB2NANTTctA',
+#     'AIzaSyA5AZYheK24asDX0smMWHmzTcOuFgIAcRw',
+#     'AIzaSyDO1kguNUtt--NUE2gbEyZDWhga2BuGXeI',
+#     'AIzaSyD2zA0PJvQAUWyWGk-UunQP5XeMbhlYBA8',
+#     'AIzaSyAO3zWuhyUKzPsweyiEDKcuiZxLKkdUNNk',
+#     'AIzaSyA9T58LWbmaHJFuCPCbJiXxPx_Y2DoiIVk'
+#     ]
 gemini_keys = [
-    'AIzaSyA5Dhdav1JfroDhO5G6OVdzFATvYTXwNuM',
-    'AIzaSyB2j_rHJOnMA9Zi7fziRd-ccB2NANTTctA',
-    'AIzaSyA5AZYheK24asDX0smMWHmzTcOuFgIAcRw',
-    'AIzaSyDO1kguNUtt--NUE2gbEyZDWhga2BuGXeI',
-    'AIzaSyD2zA0PJvQAUWyWGk-UunQP5XeMbhlYBA8',
-    'AIzaSyAO3zWuhyUKzPsweyiEDKcuiZxLKkdUNNk',
-    'AIzaSyA9T58LWbmaHJFuCPCbJiXxPx_Y2DoiIVk'
+    'AIzaSyBuKkdLBiOz36hmMPuMgEm9443xKbn7wuI',
+    'AIzaSyB8KnV0yQlhv5Xww8WMcFO6fj2VL7hejkc',
+    'AIzaSyBtErm4Oxi0mW0j9QKb9jUYEARGNt4gRc0',
+    'AIzaSyBKEXP4V_LD0q-agl7kpH_W6NKndXRpJW0',
+    'AIzaSyCNAB0MJsfeJvAwsBHSwHfAWrzINaYQNQw',
+    'AIzaSyAqK8XwR9KhMXSLPzV2JqHgbIS71a4GCkc'
+    
     ]
 azure_keys = [
     {
@@ -39,6 +49,36 @@ azure_keys = [
 def connect_to_mt5(login, password, server, terminal):
     mt5.initialize(path= terminal, login= login,password= password,server= server)
 
+def get_candles_simple(symbol: str, timeframe: int, n_candles: int = 180) -> list:
+    if not mt5.initialize():
+        raise Exception(f"Không thể khởi tạo MT5: {mt5.last_error()}")
+
+    if not mt5.symbol_select(symbol, True):
+        mt5.shutdown()
+        raise Exception(f"Không thể chọn symbol: {symbol}")
+
+    rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n_candles)
+    mt5.shutdown()
+
+    if rates is None or len(rates) == 0:
+        raise Exception("Không có dữ liệu được trả về.")
+
+    df = pd.DataFrame(rates)
+    df['time'] = df['time'].astype(int)
+
+    result = []
+    for i, row in df.iterrows():
+        result.append({
+            "time": int(row['time']),
+            "tick_volume": int(row['tick_volume']),
+            "time_readable": datetime.utcfromtimestamp(int(row['time'])).strftime('%Y-%m-%d %H:%M:%S'),
+            "open": float(row['open']),
+            "close": float(row['close']),
+            "high": float(row['high']),
+            "low": float(row['low'])
+        })
+
+    return result
 def get_old_candels(file_path):
     if os.path.exists(file_path):
         data = []
@@ -47,12 +87,13 @@ def get_old_candels(file_path):
             lines = f.readlines()
 
         for line in lines:
+            
             line = line.strip()  # Xóa ký tự thừa (newline, space)
             if line:
                 line = str(line)
                 line = re.sub(r'[^\x20-\x7E]', '', line)
                 parts = line.split("-")
-                if len(parts) == 8:
+                if len(parts) == 9:
                     try:
                         item = {
                             "time": int(parts[0]),
@@ -63,7 +104,8 @@ def get_old_candels(file_path):
                             "low": float(parts[4]),
                             "bollinger_band_upper": float(parts[5]),
                             "bollinger_band_middle": float(parts[6]),
-                            "bollinger_band_lower": float(parts[7])
+                            "bollinger_band_lower": float(parts[7]),
+                            "tick_volume": float(parts[8])
                         }
                         data.append(item)
                     except ValueError:
@@ -212,7 +254,7 @@ def generate_result_future(old_candles, old_candles2, time_frame, time_frame2, s
     tiếp theo {old_candles2} Đây là dữ liệu nến (bao gồm cả thông tin Bollinger Bands) của {symbol} với khung thời gian {time_frame2}.
     các vùng support và resitance của {time_frame2}: {suport_resitances2}.
     thông tin fibonacci: {fibonacci}.
-    Dựa trên phân tích Price Action, trendline, fibonacci, bollinger_band và các dữ liệu mà tôi cung cấp, hãy cung cấp giá sẽ đi như thế nào trong tương lai cho tôi để có thể vẽ đường line:
+    Dựa trên phân tích Price Action, tick_volume, trendline, fibonacci, bollinger_band và các dữ liệu mà tôi cung cấp, hãy cung cấp giá sẽ đi như thế nào trong tương lai cho tôi để có thể vẽ đường line:
 
     ### Kết quả trả về:
     trả ra nhiều dự đoán theo định dạng:
@@ -604,20 +646,14 @@ def update_thumbnail(
         print(f"[X] Lỗi: {e}")
 
 
-def format_utc_time_range(start_timestamp: int, duration_hours: int = 4) -> str:
-    """
-    Chuyển timestamp sang định dạng: '12H AM - 4H PM DD/MM/YYYY' theo giờ quốc tế (UTC)
-    """
-    # Chuyển sang datetime UTC
-    dt_start = datetime.fromtimestamp(start_timestamp, tz=timezone.utc)
-    dt_end = dt_start + timedelta(hours=duration_hours)
+def format_utc_time_range(days: int = 7) -> str:
+    dt_start = datetime.now(timezone.utc)
+    dt_end = dt_start + timedelta(days=days)
 
-    # Format giờ và ngày (tương thích Windows)
-    start_str = dt_start.strftime("%I").lstrip("0") + "H " + dt_start.strftime("%p")
-    end_str = dt_end.strftime("%I").lstrip("0") + "H " + dt_end.strftime("%p")
-    date_str = dt_start.strftime("%d/%m/%Y")
+    start_str = dt_start.strftime("%d/%m")
+    end_str = dt_end.strftime("%d/%m/%Y")
 
-    return f"{start_str} - {end_str} {date_str}"
+    return f"{start_str} - {end_str}"
 
 
 def upload_yt( user_data_dir, title, description, tags, video_path, video_thumbnail, is_short = False):
