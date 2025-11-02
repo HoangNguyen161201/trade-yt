@@ -11,7 +11,7 @@ from datetime import datetime
 import shutil
 import glob
 from data import chrome_driver, account, symbols, name_channel
-from data import folder_path, txt_path, info_candle_m15_path, info_candle_m1_path, picture1_path, picture2_path
+from data import terminal, folder_path, txt_path, info_candle_m15_path, info_candle_m1_path, picture1_path, picture2_path
 
 
 def main():
@@ -46,7 +46,7 @@ def main():
             thumbnail_output = f'{folder_video}/thumbnail.png'
 
             connect_to_mt5(account['login'], account['password'], account['server'],
-                           "C:\Program Files\MetaTrader 5 EXNESS\terminal64.exe")
+                           terminal)
             # index pictue
             index = 3
 

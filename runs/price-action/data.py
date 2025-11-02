@@ -50,6 +50,7 @@ symbols = [
 name_channel = 'ForexScope'
 
 # files path trong exness
+terminal = r'C:\Program Files\MetaTrader 5 EXNESS\terminal64.exe'
 folder_path = r'C:\Users\hoang nguyen\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
 txt_path = folder_path + r'\price-action.txt'
 info_candle_m15_path = folder_path + r'\candle-m15.txt'
