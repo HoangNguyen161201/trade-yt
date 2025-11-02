@@ -26,10 +26,12 @@ def main():
             base_dir = os.path.dirname(os.path.abspath(__file__))
             folder_audio = os.path.join(base_dir, './audios')
             folder_video = os.path.join(base_dir, './videos')
-            shutil.rmtree(folder_audio)
+            if os.path.exists(folder_audio):
+                shutil.rmtree(folder_audio)
             if not os.path.exists(folder_audio):
                 os.makedirs(folder_audio)
-            shutil.rmtree(folder_video)
+            if os.path.exists(folder_video):
+                shutil.rmtree(folder_video)
             if not os.path.exists(folder_video):
                 os.makedirs(folder_video)
             # Lấy danh sách tất cả file .png trong thư mục
