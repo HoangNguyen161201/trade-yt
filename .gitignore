@@ -1,0 +1,10 @@
+# Bỏ qua môi trường ảo Python
+.venv/
+
+# Bỏ qua cấu hình VS Code
+.vscode/
+
+# Bỏ qua các thư mục chứa file không cần commit
+audios/
+videos/
+youtubes/

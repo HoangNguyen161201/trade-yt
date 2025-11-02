@@ -1,0 +1,175 @@
+symbol Pullback Deepens
+symbol Drops Below Key Level
+symbol Remains Undecided
+symbol Drops a Bit
+symbol Holds Steady
+symbol Continues to See Selling
+symbol Investors Turn Sour
+symbol Shows Resiliency
+symbol May Have Hit High for Now
+symbol Sees Volatility
+symbol Holds Near Highs
+symbol Reverses Lower
+symbol Continues Noisy
+symbol Continues to Skyrocket
+symbol Shows Strength
+symbol a Little Bit Quiet
+symbol Takes a Break
+symbol Hits Next Target
+symbol Gives Back a Little
+symbol Heading for Solid Close
+symbol Fairly Quiet
+symbol Shows Fatigue
+symbol Somewhat Neutral
+symbol Weakens
+symbol Gaps Lower
+symbol Continues to Grind
+symbol Retains Strength
+symbol Pulls Back Slightly
+symbol Stalls Ascent after New Record
+symbol Continues to See Strength
+symbol Retains Strength
+symbol Pulls Back
+symbol Hits New High
+symbol Races to New Highs
+symbol Attempts to Break Out
+symbol Drops Slightly
+symbol Continues to Hang Around
+symbol Holds Strength
+symbol Continues Sideways
+symbol Trades Back and Forth
+symbol Weakness Persists
+symbol Looking to Stabilize
+symbol Is a Bit Choppy
+symbol Goes Nowhere
+symbol Retains Downward Pressure
+symbol Plunges Overnight
+symbol Near Highs for Week
+symbol Has a Wild Opening
+symbol Continues to See Overhead Ceiling
+symbol Pulls Back a Bit
+symbol Stable for a Day
+symbol Breaks Down
+symbol Looks Bearish
+symbol Has a Bit of Volatility
+symbol Remains in Consolidation
+symbol Markets Plunge
+symbol Turns Down
+symbol Breakout Out
+symbol Waits for the Bulls
+symbol Continues to Bounce Around
+symbol Shows Bulls Returning
+symbol Drifts Lower
+symbol Gaps Lower but Turns Around
+symbol Struggles a Little Bit
+symbol Shows Seller in Charge
+symbol Holds Stead
+symbol Drops a Bit After NFP
+symbol Triggers Breakdown
+symbol Consolidates Near Lows
+symbol Dip Deepens
+symbol Pulls Back Just a Bit
+symbol Drifts a Little Bit Lower
+symbol Fairly Choppy
+symbol Continues Sideways Waiting FOMC
+symbol Continues to Consolidate
+symbol Continues to See Noisy Behavior
+symbol Falls
+symbol Stays Paused
+symbol Consolidates Further
+symbol Slumps at High Levels
+symbol Drops a Little Bit
+symbol Continues to Chop Back and Forth
+symbol Teeters
+symbol Continues to See Noise
+symbol Holds Firm
+symbol Heads Lower
+symbol Get Pummeled
+symbol Sits in Bearish Posture
+symbol Continues to Be Very Noisy
+symbol Prepped to Rise
+symbol Continues to See Volatility
+symbol Consolidates Today
+symbol Looks for Floor Below
+symbol Further Consolidates
+symbol Markets Bounce After Selling
+symbol Forms Bearish Pennant
+symbol Continues to See Choppiness
+symbol Continues to See Profit Taking
+symbol Takes a Rest Day
+symbol Hits New Record
+symbol Markets Continue to Spike
+symbol Markets Continue to Skyrocket
+symbol Hits Record Close
+symbol Surge Stalls
+symbol Continues to Launch Into Space
+symbol Consolidates Around Recent Record
+symbol Continues to See Interest
+symbol Faces Bearish Reversal
+symbol Shows Signs of Bearish Reversal
+symbol Gets Hammered After Tariffs
+symbol Remain Near Highs
+symbol Looks a Touch Tired
+Consolidates Near All-Time High
+symbol Rallied Into Resistance
+symbol Hits Record but Momentum Stalls
+symbol Hits Yet Another All-Time High
+symbol Continues to Climb
+symbol Nears Key Resistance
+symbol Continues to Build a Flag
+symbol Has a Choppy Session
+symbol Hits Key Resistance
+symbol Drops to New Low
+symbol Fell Pretty Significantly
+symbol Triggered a Bearish Reversal
+symbol Struggles Near Highs
+symbol Markets Stabilize a Bit
+symbol Fails to Follow Breakout
+symbol Faces Reversal
+symbol Market Pull Back a Bit
+symbol Has a Wild Night in Asia
+symbol Hits New Record but Reverses
+symbol Continues to Power Ahead
+symbol  Continues to See Buying
+symbol Tests Resistance
+symbol May Pull Back Ahead of the Fed
+symbol Had a Rest Day
+symbol Pulls Back in the Early Hours
+symbol Has a Slightly Negative Start
+symbol Stalls and Trades Inside Day
+symbol Drifts a Bit Lower
+symbol at Seven Week Highs Area
+symbol Shows Signs of Strength
+symbol Countinues to Strengthen
+symbol Begins to Strengthen a Bit
+symbol Remains Stuck
+symbol Battles Resistance
+symbol Consolidates, but Still Bearish
+symbol's Bearish Correction Deepens
+symbol Drops Sharply After FOMC
+symbol Quiet Ahead of FOMC
+symbol Continues to Retrace
+symbol ContinueS Bearish Correction
+symbol Continues to See Noisy Trading
+symbol Continues to Strengthen
+symbol Plunges but Turns Around
+symbol Surpasses Key Resistance Levels
+symbol Fails Attempt to Break Down
+symbol Drops Through Key Indicators
+symbol Does Very Little
+symbol Forms a Bear Flag Pattern
+symbol Continues to Do Nothing
+symbol Finds Resistance Around MA
+symbol Triggered Weakness
+symbol Targets Lower Levels
+symbol Pulls Back a Little Bit
+symbol Continues Its Counter-trend
+symbol Sinks to New Low
+symbol Continues Its Correction
+symbol Has a Little Bit of Negativity
+symbol Plunges Below Key Levels
+symbol Plunges After Election
+symbol Continues Its Small Pullback
+symbol Waits for the U.S. Elections
+symbol Signals Potential Downturn
+symbol Reverses From a New Record
