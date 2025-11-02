@@ -47,7 +47,7 @@ symbols = [
     }
 ]
 
-name_channel = 'FX MIND - READING'
+name_channel = 'ForexScope'
 
 # files path trong exness
 folder_path = r'C:\Users\hoang nguyen\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
