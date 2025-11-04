@@ -173,14 +173,7 @@ def main():
                 Please:
                 1. Write a professional, SEO-optimized YouTube description in English.
                 2. Include relevant hashtags at the end (e.g. #trading #forex #priceaction).
-                3. After that, on a new line, write "tags:" followed by a comma-separated list of tags.
-                4. Do NOT include any "Description:" label or introduction — output only the content.
-
-                Example format:
-
-                <description text here>
-
-                tags: tag1, tag2, tag3, tag4, ...
+                3. Do NOT include any "Description:" label or introduction — output only the content.
                 """,
                 gemini_keys[0]
             )
