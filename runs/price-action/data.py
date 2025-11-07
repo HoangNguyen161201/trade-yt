@@ -8,7 +8,7 @@ symbols = [
     {
         "symbol": 'XAUUSDm',
         "symbol_title_generate_content": "GOLD",
-        "symbol_title": 'XAU/USD'
+        "symbol_title": 'XAU/USD',
     },
     {
         "symbol": "EURGBPm",

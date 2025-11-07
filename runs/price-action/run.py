@@ -12,7 +12,7 @@ import shutil
 import glob
 from data import chrome_driver, account, symbols, name_channel
 from data import terminal, folder_path, txt_path, info_candle_m15_path, info_candle_m1_path, picture1_path, picture2_path
-
+from db import get_end_screen_video_ad, add_end_screen_video_ad, update_end_screen_video_ad
 
 def main():
     is_start = True
@@ -296,6 +296,12 @@ def main():
                 f'{folder_video}/{title_slug}.mp4',
                 thumbnail_output,
             )
+            
+            end_screen_video_ad = get_end_screen_video_ad('trade')
+            if end_screen_video_ad is not None:
+                update_end_screen_video_ad(end_screen_video_ad['_id'], title, f'{symbol_title} Price Forecast')
+            else:
+                add_end_screen_video_ad('trade', title, f'{symbol_title} Price Forecast')
 
             end_time = time.time()
             print(f"Thời gian thực thi: {end_time - start_time:.2f} giây")

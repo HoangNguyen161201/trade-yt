@@ -578,6 +578,27 @@ def format_utc_time_range(days: int = 7) -> str:
 
     return f"{start_str} - {end_str}"
 
+def check_exist_video_hd(browser):
+    timeout = 20 * 60
+    start_time = time.time()
+    is_not_find_status = False
+    while True:
+        # element = browser.find_elements(By.XPATH, '//*[@check-status="UPLOAD_CHECKS_DATA_COPYRIGHT_STATUS_COMPLETED" or @checks-summary-status-v2="UPLOAD_CHECKS_DATA_SUMMARY_STATUS_STARTED" or @check-status="UPLOAD_CHECKS_DATA_COPYRIGHT_STATUS_STARTED"]')
+        element = browser.find_elements(By.XPATH, '//*[@check-status="UPLOAD_CHECKS_DATA_COPYRIGHT_STATUS_COMPLETED" or @checks-summary-status-v2="UPLOAD_CHECKS_DATA_SUMMARY_STATUS_COMPLETED" or @checks-summary-status-v2="UPLOAD_CHECKS_DATA_SUMMARY_STATUS_STARTED"]')
+        if element:
+            break  # Thoát vòng lặp nếu tìm thấy
+        
+        elapsed = time.time() - start_time
+        if elapsed > timeout:
+            is_not_find_status = True
+            break
+        print("Chưa tìm thấy, tiếp tục kiểm tra...")
+        time.sleep(2)  # Đợi 2 giây trước khi kiểm tra lại
+
+    if is_not_find_status is True:
+        browser.quit()
+        raise Exception("lỗi upload youtube")
+    
 def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbnail, comment=None, is_not_wait_check=False):
     # dùng để tạo ra 1 user
     # chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
@@ -703,41 +724,41 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     browser.find_element(By.ID, 'next-button').click()
     time.sleep(10)
 
+    check_exist_video_hd(browser)
+    
     # # add end screens
-    # WebDriverWait(browser, 10).until(
-    #     EC.presence_of_all_elements_located((By.ID, 'endscreens-button'))
-    # )
-    # browser.find_element(By.ID, 'endscreens-button').click()
-    # time.sleep(2)
-    # canvas_element = WebDriverWait(browser, 10).until(
-    #     EC.element_to_be_clickable((By.TAG_NAME, "canvas"))
-    # )
-    # browser.execute_script("arguments[0].click();", canvas_element)
-    # time.sleep(2)
-    # browser.find_element(By.ID, 'save-button').click()
-    # time.sleep(4)
+    WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable((By.ID, 'endscreens-button'))
+    )
+    browser.find_element(By.ID, 'endscreens-button').click()
+    
+    # 1️⃣ Đợi cho phần tử card xuất hiện
+    time.sleep(3)
+    cards = WebDriverWait(browser, 100).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".card.style-scope.ytve-endscreen-template-picker"))
+    )
+    browser.execute_script("arguments[0].click();", cards[0])
+
+    time.sleep(3)
+    WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable((By.ID, 'save-button'))
+    )
+    browser.find_element(By.ID, 'save-button').click()
 
     # next
+    time.sleep(3)
     WebDriverWait(browser, 100).until(
         EC.element_to_be_clickable((By.ID, 'next-button'))
     )
     browser.find_element(By.ID, 'next-button').click()
-    time.sleep(10)
-
-    while is_not_wait_check is False:
-        try:
-            element = browser.find_elements(
-                By.XPATH, '//*[@check-status="UPLOAD_CHECKS_DATA_COPYRIGHT_STATUS_COMPLETED" or @check-status="UPLOAD_CHECKS_DATA_COPYRIGHT_STATUS_STARTED"]')
-            if element:
-                break  # Thoát vòng lặp nếu tìm thấy
-        except:
-            print('')
-        print("Chưa tìm thấy, tiếp tục kiểm tra...")
-        time.sleep(2)  # Đợi 2 giây trước khi kiểm tra lại
+    time.sleep(2)
+    
+    check_exist_video_hd(browser)
 
     WebDriverWait(browser, 100).until(
         EC.element_to_be_clickable((By.ID, 'next-button'))
     )
+    
     browser.find_element(By.ID, 'next-button').click()
     time.sleep(2)
 
