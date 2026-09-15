@@ -805,7 +805,9 @@ def check_exist_video_hd(browser):
     if is_not_find_status is True:
         browser.quit()
         raise Exception("lỗi upload youtube")
-    
+
+
+ 
 def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbnail, comment=None, is_not_wait_check=False):
     # dùng để tạo ra 1 user
     # chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
@@ -817,8 +819,8 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     chrome_options = Options()
 
     # Chỉ định đường dẫn đến thư mục user data
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    # chrome_options.add_argument(
+    #     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     chrome_options.add_argument(f"user-data-dir={user_data_dir}")
     # Nếu bạn muốn sử dụng profile mặc định
     chrome_options.add_argument("profile-directory=Default")
@@ -830,8 +832,9 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
 
     # Khởi tạo WebDriver với các tùy chọn
     browser = webdriver.Chrome(service=service, options=chrome_options)
-
     browser.get("https://studio.youtube.com/")
+    
+    
     # await browser load end
     element = WebDriverWait(browser, 100).until(
         EC.element_to_be_clickable(
@@ -930,27 +933,100 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     # next btn
     browser.find_element(By.ID, 'next-button').click()
     time.sleep(10)
-
     check_exist_video_hd(browser)
     
-    # # add end screens
-    WebDriverWait(browser, 100).until(
-        EC.element_to_be_clickable((By.ID, 'endscreens-button'))
+    # bật kiếm tiền -------------------------------------------
+    earn_selection = WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable((
+            By.CSS_SELECTOR,
+            'ytcp-video-monetization ytcp-icon-button.edit-button'
+        ))
     )
-    browser.find_element(By.ID, 'endscreens-button').click()
-    
-    # 1️⃣ Đợi cho phần tử card xuất hiện
-    time.sleep(3)
-    cards = WebDriverWait(browser, 100).until(
-        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".card.style-scope.ytve-endscreen-template-picker"))
+    earn_selection.click()
+    time.sleep(1)
+    # 2. Chọn "Bật"
+    radio_on = WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable((
+            By.CSS_SELECTOR,
+            "tp-yt-paper-radio-button#radio-on"
+        ))
     )
-    browser.execute_script("arguments[0].click();", cards[0])
+    radio_on.click()
+    time.sleep(1)
+    # 3. Chờ nút "Xong" được enable
+    save_button = WebDriverWait(browser, 100).until(
+         EC.element_to_be_clickable((
+        By.CSS_SELECTOR,
+        "ytcp-button#save-button:not([disabled])"
+    ))
+    )
+    save_button.click()
+    time.sleep(2)
+    # next btn
+    browser.find_element(By.ID, 'next-button').click()
+    time.sleep(10)
+    scrollable_element = WebDriverWait(browser, 100).until(
+        EC.presence_of_element_located((By.ID, "scrollable-content"))
+    )
+    browser.execute_script(
+        "arguments[0].scrollTo(0, arguments[0].scrollHeight);",
+        scrollable_element
+    )
+    time.sleep(2)
+    checkbox = WebDriverWait(browser, 100).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "ytcp-checkbox-lit.all-none-checkbox div#checkbox"))
+    )
+    browser.execute_script("arguments[0].click();", checkbox)
+    time.sleep(2)
+    browser.execute_script(
+        "arguments[0].scrollTo(0, 0);",
+        scrollable_element
+    )
+    time.sleep(2)
+    # 1. Đợi cho nút "Gửi thông tin đánh giá" xuất hiện
+    submit_button = WebDriverWait(browser, 100).until(
+        EC.presence_of_element_located((By.ID, "submit-questionnaire-button"))
+    )
 
-    time.sleep(3)
-    WebDriverWait(browser, 100).until(
-        EC.element_to_be_clickable((By.ID, 'save-button'))
+    # 2. Click bằng JavaScript để tránh bị che khuất bởi các lớp phủ (overlay)
+    browser.execute_script("arguments[0].click();", submit_button)
+    time.sleep(5)
+    progress = WebDriverWait(browser, 100).until(
+        lambda d: d.find_element(
+            By.CLASS_NAME,
+            "dialog-content"
+        ).find_element(
+            By.TAG_NAME,
+            "tp-yt-paper-progress"
+        )
     )
-    browser.find_element(By.ID, 'save-button').click()
+    WebDriverWait(browser, 100).until(
+        lambda d: progress.get_attribute("hidden") is not None
+    )
+    
+    WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable((By.ID, 'next-button'))
+    )
+    browser.find_element(By.ID, 'next-button').click()
+    
+    
+    # # add end screens
+    # WebDriverWait(browser, 100).until(
+    #     EC.element_to_be_clickable((By.ID, 'endscreens-button'))
+    # )
+    # browser.find_element(By.ID, 'endscreens-button').click()
+    
+    # # 1️⃣ Đợi cho phần tử card xuất hiện
+    # time.sleep(3)
+    # cards = WebDriverWait(browser, 100).until(
+    #     EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".card.style-scope.ytve-endscreen-template-picker"))
+    # )
+    # browser.execute_script("arguments[0].click();", cards[0])
+    # time.sleep(3)
+    # WebDriverWait(browser, 100).until(
+    #     EC.element_to_be_clickable((By.ID, 'save-button'))
+    # )
+    # browser.find_element(By.ID, 'save-button').click()
 
     # next
     time.sleep(3)
@@ -965,9 +1041,24 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     WebDriverWait(browser, 100).until(
         EC.element_to_be_clickable((By.ID, 'next-button'))
     )
-    
     browser.find_element(By.ID, 'next-button').click()
+    time.sleep(3)
+    
+    
+    # click public
+    scrollable_element = WebDriverWait(browser, 100).until(
+        EC.presence_of_element_located((By.ID, "scrollable-content"))
+    )
+    browser.execute_script(
+        "arguments[0].scrollTo(0, arguments[0].scrollHeight);", scrollable_element)
     time.sleep(2)
+    public_radio = WebDriverWait(browser, 100).until(
+        EC.element_to_be_clickable(
+            (By.CSS_SELECTOR, 'tp-yt-paper-radio-button[name="PUBLIC"]')
+        )
+    )
+    public_radio.click()
+    time.sleep(3)
 
     # done
     print('upload video in youtube thành công')
@@ -977,45 +1068,45 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     browser.find_element(By.ID, 'done-button').click()
 
     # vào youtube để nhập bình luận
-    if comment is not None:
-        WebDriverWait(browser, 100).until(
-            EC.presence_of_all_elements_located((By.ID, 'share-url'))
-        )
-        link_redirect = browser.find_element(By.ID, 'share-url')
-        href = link_redirect.get_attribute('href')
-        browser.get(href)
-        WebDriverWait(browser, 100).until(
-            EC.presence_of_all_elements_located((By.ID, 'above-the-fold'))
-        )
-        time.sleep(5)
-        is_Find_comment = False
-        while is_Find_comment is False:
-            try:
-                browser.execute_script("window.scrollBy(0, 50);")
-                time.sleep(1)
-                comment_box = browser.find_element(
-                    By.ID, 'simplebox-placeholder')
-                if (comment_box):
-                    is_Find_comment = True
-                time.sleep(3)
-            except:
-                time.sleep(3)
+    # if comment is not None:
+    #     WebDriverWait(browser, 100).until(
+    #         EC.presence_of_all_elements_located((By.ID, 'share-url'))
+    #     )
+    #     link_redirect = browser.find_element(By.ID, 'share-url')
+    #     href = link_redirect.get_attribute('href')
+    #     browser.get(href)
+    #     WebDriverWait(browser, 100).until(
+    #         EC.presence_of_all_elements_located((By.ID, 'above-the-fold'))
+    #     )
+    #     time.sleep(5)
+    #     is_Find_comment = False
+    #     while is_Find_comment is False:
+    #         try:
+    #             browser.execute_script("window.scrollBy(0, 50);")
+    #             time.sleep(1)
+    #             comment_box = browser.find_element(
+    #                 By.ID, 'simplebox-placeholder')
+    #             if (comment_box):
+    #                 is_Find_comment = True
+    #             time.sleep(3)
+    #         except:
+    #             time.sleep(3)
 
-        comment_box = browser.find_element(By.ID, 'simplebox-placeholder')
-        comment_box.click()
-        textarea = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "div#contenteditable-root[contenteditable='true']"))
-        )
-        pyperclip.copy(comment)
-        textarea.click()
-        time.sleep(1)
-        textarea.send_keys(Keys.CONTROL, 'v')
-        time.sleep(2)
-        submit_button = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.ID, "submit-button"))
-        )
-        submit_button.click()
+    #     comment_box = browser.find_element(By.ID, 'simplebox-placeholder')
+    #     comment_box.click()
+    #     textarea = WebDriverWait(browser, 10).until(
+    #         EC.presence_of_element_located(
+    #             (By.CSS_SELECTOR, "div#contenteditable-root[contenteditable='true']"))
+    #     )
+    #     pyperclip.copy(comment)
+    #     textarea.click()
+    #     time.sleep(1)
+    #     textarea.send_keys(Keys.CONTROL, 'v')
+    #     time.sleep(2)
+    #     submit_button = WebDriverWait(browser, 10).until(
+    #         EC.presence_of_element_located((By.ID, "submit-button"))
+    #     )
+    #     submit_button.click()
 
     try:
         WebDriverWait(browser, 30).until(
@@ -1031,24 +1122,6 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
             (By.XPATH, "//tp-yt-paper-dialog[@id='dialog']"))
     )
     browser.quit()
-
-def trim_keywords_to_limit(keywords_str, limit=400):
-    keywords = [kw.strip() for kw in keywords_str.split(',')]
-    result = []
-    total_length = 0
-
-    for kw in keywords:
-        kw_len = len(kw)
-        # Cộng thêm 1 cho dấu phẩy nếu đã có từ trước
-        if result:
-            kw_len += 1
-        if total_length + kw_len <= limit:
-            result.append(kw)
-            total_length += kw_len
-        else:
-            break
-
-    return ",".join(result)
 
 
 def create_thumbnail(
