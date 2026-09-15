@@ -1,108 +1,193 @@
-from db import get_end_screen_video_ad, update_end_screen_video_ad
+import requests
+import sys
+import time
 
-data = get_end_screen_video_ad('trade')
-print(data)
-update_end_screen_video_ad(data['_id'], 'XAU/USD Price Forecast Today, Technical Analysis (November 06): XAU/USD Pulls Back Again', 'XAUUSD Price Forecast')
 
-# from selenium.webdriver.common.keys import Keys
-# from selenium import webdriver
-# from selenium.webdriver.chrome.options import Options
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.chrome.service import Service
-# from webdriver_manager.chrome import ChromeDriverManager
+OPENCODE_URL = "http://127.0.0.1:55080"
 
-# import time
-# import os
-# base_dir = os.path.dirname(os.path.abspath(__file__))
-# user_data_dir = os.path.join(base_dir, './youtubes/test')
-# chrome_options = Options()
 
-# # Chỉ định đường dẫn đến thư mục user data
-# chrome_options.add_argument(
-#     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-# chrome_options.add_argument(f"user-data-dir={user_data_dir}")
-# # Nếu bạn muốn sử dụng profile mặc định
-# chrome_options.add_argument("profile-directory=Default")
-# # chrome_options.add_argument("--headless")  # Chạy trong chế độ không giao diện
-# # chrome_options.add_argument("--disable-gpu")  # Tắt GPU (thường dùng trong môi trường máy chủ)
+def check_opencode():
+    """
+    Kiểm tra OpenCode server có đang chạy không.
+    """
+    try:
+        response = requests.get(
+            f"{OPENCODE_URL}/global/health",
+            timeout=5
+        )
 
-# # Sử dụng Service để chỉ định ChromeDriver
-# service = Service(ChromeDriverManager().install())
+        if response.status_code == 200:
+            data = response.json()
 
-# # Khởi tạo WebDriver với các tùy chọn
-# browser = webdriver.Chrome(service=service, options=chrome_options)
+            if data.get("healthy"):
+                print("OpenCode đang chạy.")
+                print("Version:", data.get("version"))
+                return True
 
-# browser.get("https://studio.youtube.com/")
+    except requests.RequestException:
+        pass
 
-# input_data = input("Nhập chọn chức năng: ")
+    return False
 
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.ID, 'endscreens-button'))
-# )
-# browser.find_element(By.ID, 'endscreens-button').click()
 
-# # 1️⃣ Đợi cho phần tử card xuất hiện
-# time.sleep(3)
-# cards = WebDriverWait(browser, 100).until(
-#     EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".card.style-scope.ytve-endscreen-template-picker"))
-# )
-# browser.execute_script("arguments[0].click();", cards[0])
+def create_session():
+    """
+    Tạo một session mới trong OpenCode.
+    """
 
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.ID, 'save-button'))
-# )
-# browser.find_element(By.ID, 'save-button').click()
+    response = requests.post(
+        f"{OPENCODE_URL}/session",
+        json={},
+        timeout=30
+    )
 
-# # ------------------------------------------------------------------
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.ID, 'cards-button'))
-# )
-# browser.find_element(By.ID, 'cards-button').click()
+    response.raise_for_status()
 
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.CLASS_NAME, 'info-card-type-option-container'))
-# )
-# browser.find_elements(By.CLASS_NAME, 'info-card-type-option-container')[0].click()
+    data = response.json()
 
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.ID, 'search-any'))
-# )
-# browser.find_element(By.ID, 'search-any').click()
+    return data["id"]
 
-# time.sleep(3)
-# input = browser.find_element(By.ID, 'search-any')
-# input.clear()
-# input.send_keys('XAU/USD Price Forecast Today, Technical Analysis (November 05): XAU/USD Has a Strong Open')
 
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.TAG_NAME, 'ytcp-entity-card'))
-# )
-# browser.find_elements(By.TAG_NAME, 'ytcp-entity-card')[0].click()
+def generate_content(prompt):
+    """
+    Gửi prompt tới OpenCode và lấy content trả về.
+    """
 
-# time.sleep(3)
-# textareas = WebDriverWait(browser, 30).until(
-#     EC.presence_of_all_elements_located((By.CSS_SELECTOR, "textarea.ytve-lightweight-textarea"))
-# )
-# textareas[0].clear()
-# textareas[0].send_keys("ô thứ nhất")
-# time.sleep(3)
-# textareas[1].clear()
-# textareas[1].send_keys("ô thứ hai")
+    session_id = create_session()
 
-# time.sleep(3)
-# WebDriverWait(browser, 100).until(
-#     EC.element_to_be_clickable((By.ID, 'save-button'))
-# )
-# browser.find_element(By.ID, 'save-button').click()
+    print("Session:", session_id)
+    print("Đang yêu cầu OpenCode sinh content...")
 
-# time.sleep(1000000)
+    response = requests.post(
+        f"{OPENCODE_URL}/session/{session_id}/message",
+        json={
+            "parts": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        },
+        timeout=300
+    )
 
-# # id:endscreens-button class:template-preview id:save-button
-# # id:cards-button class:info-card-type-option-container[0] tagname:tp-yt-paper-tab[3] còn tiếp
+    response.raise_for_status()
+
+    data = response.json()
+
+    return extract_text(data)
+
+
+def extract_text(data):
+    """
+    Cố gắng lấy text từ response của OpenCode.
+    """
+
+    # Một số version/API có thể trả parts
+    if isinstance(data, dict):
+
+        # response trực tiếp có parts
+        parts = data.get("parts")
+
+        if isinstance(parts, list):
+            texts = []
+
+            for part in parts:
+                if not isinstance(part, dict):
+                    continue
+
+                if part.get("type") == "text":
+                    text = part.get("text")
+
+                    if text:
+                        texts.append(text)
+
+            if texts:
+                return "\n".join(texts)
+
+        # response nằm trong message
+        message = data.get("message")
+
+        if isinstance(message, dict):
+
+            parts = message.get("parts")
+
+            if isinstance(parts, list):
+                texts = []
+
+                for part in parts:
+                    if not isinstance(part, dict):
+                        continue
+
+                    if part.get("type") == "text":
+                        text = part.get("text")
+
+                        if text:
+                            texts.append(text)
+
+                if texts:
+                    return "\n".join(texts)
+
+    return str(data)
+
+
+def main():
+
+    if not check_opencode():
+
+        print()
+        print("Không kết nối được tới OpenCode.")
+        print()
+        print("Hãy chạy OpenCode server trước:")
+        print()
+        print("    opencode serve --port 4096")
+        print()
+
+        sys.exit(1)
+
+    prompt = """
+Bạn là một content writer chuyên nghiệp.
+
+Hãy viết một đoạn content TikTok ngắn về chủ đề:
+
+"Cà phê Việt Nam"
+
+Yêu cầu:
+- Khoảng 100 từ
+- Hook mạnh ở câu đầu tiên
+- Giọng văn tự nhiên
+- Có cảm xúc
+- Không giải thích gì thêm
+- Chỉ trả về content
+"""
+
+    try:
+
+        content = generate_content(prompt)
+
+        print()
+        print("=" * 60)
+        print("CONTENT")
+        print("=" * 60)
+        print()
+        print(content)
+        print()
+        print("=" * 60)
+
+    except requests.RequestException as e:
+
+        print("Lỗi kết nối OpenCode:")
+        print(e)
+
+        sys.exit(1)
+
+    except Exception as e:
+
+        print("Lỗi:")
+        print(e)
+
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,19 +1,14 @@
 account = {
-    "password": 'Cuem1612@',
-    "login": 213253999,
-    "server": 'Exness-MT5Real28'
+    "password": 'Huy16120101@',
+    "login": 434214847,
+    "server": 'Exness-MT5Trial7'
 }
 
 symbols = [
     {
-        "symbol": 'XAUUSDm',
-        "symbol_title_generate_content": "GOLD",
-        "symbol_title": 'XAU/USD',
-    },
-    {
-        "symbol": "EURGBPm",
-        "symbol_title_generate_content": "EURGBP",
-        "symbol_title": "EUR/GBP"
+        "symbol": "AUDJPYm",
+        "symbol_title_generate_content": "AUDJPY",
+        "symbol_title": "AUD/JPY"
     },
     {
         "symbol": "EURJPYm",
@@ -21,14 +16,24 @@ symbols = [
         "symbol_title": "EUR/JPY"
     },
     {
+        "symbol": "BTCUSDm",
+        "symbol_title_generate_content": "Bitcoin",
+        "symbol_title": "BTC/USD"
+    },
+    {
+        "symbol": "EURGBPm",
+        "symbol_title_generate_content": "EURGBP",
+        "symbol_title": "EUR/GBP"
+    },
+    {
+        "symbol": 'XAUUSDm',
+        "symbol_title_generate_content": "GOLD",
+        "symbol_title": 'XAU/USD',
+    },
+    {
         "symbol": "GBPJPYm",
         "symbol_title_generate_content": "GBPJPY",
         "symbol_title": "GBP/JPY"
-    },
-    {
-        "symbol": "AUDJPYm",
-        "symbol_title_generate_content": "AUDJPY",
-        "symbol_title": "AUD/JPY"
     },
     {
         "symbol": "EURAUDm",
@@ -47,11 +52,11 @@ symbols = [
     }
 ]
 
-name_channel = 'ForexScope'
+name_channel = 'Louvis'
 
 # files path trong exness
 terminal = r'C:\Program Files\MetaTrader 5 EXNESS\terminal64.exe'
-folder_path = r'C:\Users\hoang nguyen\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
+folder_path = r'C:\Users\admin\AppData\Roaming\MetaQuotes\Terminal\53785E099C927DB68A545C249CDBCE06\MQL5\Files'
 txt_path = folder_path + r'\price-action.txt'
 info_candle_m15_path = folder_path + r'\candle-m15.txt'
 info_candle_m1_path = folder_path + r'\candle-m1.txt'

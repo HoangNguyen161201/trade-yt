@@ -1,8 +1,7 @@
-from util import check_identity_verification, open_chrome_to_edit, generate_bearish_or_bullish, create_thumbnail, trim_keywords_to_limit, format_utc_time_range, generate_content, upload_yt, connect_to_mt5, get_old_candels, create_video_from_gif_and_audio, create_video_from_image_and_audio, concat_videos_ffmpeg, combine_image_audios, check_draw_done, generate_voice_data, generate_voice_azure, gemini_keys, extract_data_future_number_or_reason, generate_introduce_content, create_transition_gif, generate_support_resistance, generate_result_future, generate_trendline, generate_fibonacci
+from util import generate_bearish_or_bullish, create_thumbnail, trim_keywords_to_limit, format_utc_time_range, generate_content, upload_yt, connect_to_mt5, get_old_candels, create_video_from_gif_and_audio, create_video_from_image_and_audio, concat_videos_ffmpeg, check_draw_done, generate_voice_data, extract_data_future_number_or_reason, generate_introduce_content, create_transition_gif, generate_support_resistance, generate_result_future, generate_trendline, generate_fibonacci
 import MetaTrader5 as mt5
 import re
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import freeze_support
 import time
 from slugify import slugify
 import os
@@ -10,9 +9,9 @@ import random
 from datetime import datetime
 import shutil
 import glob
-from data import chrome_driver, account, symbols, name_channel
+from data import account, symbols, name_channel
 from data import terminal, folder_path, txt_path, info_candle_m15_path, info_candle_m1_path, picture1_path, picture2_path
-from db import get_end_screen_video_ad, add_end_screen_video_ad, update_end_screen_video_ad
+
 
 def main():
     is_start = True
@@ -26,14 +25,10 @@ def main():
             base_dir = os.path.dirname(os.path.abspath(__file__))
             folder_audio = os.path.join(base_dir, './audios')
             folder_video = os.path.join(base_dir, './videos')
-            if os.path.exists(folder_audio):
-                shutil.rmtree(folder_audio)
-            if not os.path.exists(folder_audio):
-                os.makedirs(folder_audio)
-            if os.path.exists(folder_video):
-                shutil.rmtree(folder_video)
-            if not os.path.exists(folder_video):
-                os.makedirs(folder_video)
+            shutil.rmtree(folder_audio, ignore_errors=True)
+            os.makedirs(folder_audio, exist_ok=True)
+            shutil.rmtree(folder_video, ignore_errors=True)
+            os.makedirs(folder_video, exist_ok=True)
             # Lấy danh sách tất cả file .png trong thư mục
             png_files = glob.glob(os.path.join(folder_path, "*.png"))
             for file_path in png_files:
@@ -49,6 +44,7 @@ def main():
 
             connect_to_mt5(account['login'], account['password'], account['server'],
                            terminal)
+
             # index pictue
             index = 3
 
@@ -75,13 +71,13 @@ def main():
 
             start_time = time.time()
             support_resistance_m15_content = generate_support_resistance(
-                old_candles_m15, '15 phút', current_candle_m15['low'], current_candle_m15['high'], gemini_keys[0], symbol_title_generate_content)
+                old_candles_m15, '15 phút', current_candle_m15['low'], current_candle_m15['high'], symbol_title_generate_content)
             support_resistance_m1_content = generate_support_resistance(
-                old_candles_m1, '1 phút', current_candle_m1['low'], current_candle_m1['high'], gemini_keys[0], symbol_title_generate_content)
+                old_candles_m1, '1 phút', current_candle_m1['low'], current_candle_m1['high'], symbol_title_generate_content)
             trend_line = generate_trendline(
-                old_candles_m15, '15 phút', gemini_keys[0], symbol_title_generate_content)
+                old_candles_m15, '15 phút', symbol_title_generate_content)
             introduce_content = generate_introduce_content(
-                symbol_title_generate_content, "15 phút", "1 phút", name_channel, gemini_keys[0])
+                symbol_title_generate_content, "15 phút", "1 phút", name_channel)
 
             # convert lại để vẽ trong mql5
             pattern = re.compile(
@@ -130,11 +126,10 @@ def main():
             ]
             # tạo fibonacci
             fibonacci = generate_fibonacci(old_candles_m1, '1 phút', support_resistance_m15_content + ". " +
-                                           support_resistance_m1_content, trend_line, gemini_keys[0], symbol_title_generate_content)
-            print(fibonacci)
+                                           support_resistance_m1_content, trend_line, symbol_title_generate_content)
             # tạo dự đoán tương lai
             future_result = generate_result_future(old_candles_m15, old_candles_m1, "15 phút", "1 phút", support_resistance_m15_content,
-                                                   support_resistance_m1_content, trend_line, fibonacci, gemini_keys[0], gemini_keys[0], symbol_title_generate_content)
+                                                   support_resistance_m1_content, trend_line, fibonacci, symbol_title_generate_content)
             future = extract_data_future_number_or_reason(future_result.strip(
             ), f'future-{old_candles_m15[old_candles_m15.__len__() - 1]['time']}')
             future_reason = extract_data_future_number_or_reason(
@@ -142,7 +137,8 @@ def main():
 
             # xác định tăng hay giảm để tọa title
             bearish_or_bullish = generate_bearish_or_bullish(
-                future_reason, gemini_keys[0])
+                future_reason)
+
             # tạo title
             title_path = 'bullish.txt' if 'bullish' in bearish_or_bullish.lower() else 'bearish.txt'
             file_path = os.path.join(base_dir, title_path)
@@ -174,13 +170,12 @@ def main():
                 1. Write a professional, SEO-optimized YouTube description in English.
                 2. Include relevant hashtags at the end (e.g. #trading #forex #priceaction).
                 3. Do NOT include any "Description:" label or introduction — output only the content.
-                """,
-                gemini_keys[0]
+                """
             )
 
             print('bắt đầu tạo tags')
             tags = generate_content(f'tôi đang có title là: {title}, tôi đang tạo ra video phân tích trade và đưa ra xu hướng trade tương lai cho {
-                                    symbol_title_generate_content} với khung thời gian 15 phút và 1 phút. Hãy cung cấp tags bằng tiếng anh chuẩn seo, nhiều người tìm kiếm trên youtube, không phải hastag, tag nào quan trọng phải được liệt kê trước, (các tag phải ngăn cách bằng dấu "," ví dụ tag1,tag2,tag3,...). để cho tôi gắn vào phần tags cho video youtube của tôi. trả ra tags cho tôi luôn, không cần phải ghi thêm gì hết.', gemini_keys[0])
+                                    symbol_title_generate_content} với khung thời gian 15 phút và 1 phút. Hãy cung cấp tags bằng tiếng anh chuẩn seo, nhiều người tìm kiếm trên youtube, không phải hastag, tag nào quan trọng phải được liệt kê trước, (các tag phải ngăn cách bằng dấu "," ví dụ tag1,tag2,tag3,...). để cho tôi gắn vào phần tags cho video youtube của tôi. trả ra tags cho tôi luôn, không cần phải ghi thêm gì hết.')
             tags = trim_keywords_to_limit(tags.replace(', ', ','), 400)
 
             # truyền thông tin để vẽ vào mql5
@@ -274,7 +269,20 @@ def main():
             concat_videos_ffmpeg(intro_path, data_video_paths, f'{
                                  folder_video}/{title_slug}.mp4')
 
-            # upload video
+            # viết vào file txt
+            lines = [
+                f"{title}\n",
+                f"{description}\n",
+                f"{tags}\n"
+            ]
+            if os.path.exists("data.txt"):
+                print("File đã tồn tại, xóa dữ liệu cũ...")
+            with open("data.txt", "w", encoding="utf-8") as file:
+                file.writelines(lines)
+            print("Đã ghi dữ liệu mới!")
+            
+            
+            # upload video ------------------------------------------
             base_dir = os.path.dirname(os.path.abspath(__file__))
             folder_youtubes = os.path.join(base_dir, './youtubes')
             folders = [
@@ -290,11 +298,6 @@ def main():
                 thumbnail_output,
             )
             
-            end_screen_video_ad = get_end_screen_video_ad('trade')
-            if end_screen_video_ad is not None:
-                update_end_screen_video_ad(end_screen_video_ad['_id'], title, f'{symbol_title} Price Forecast')
-            else:
-                add_end_screen_video_ad('trade', title, f'{symbol_title} Price Forecast')
 
             end_time = time.time()
             print(f"Thời gian thực thi: {end_time - start_time:.2f} giây")
@@ -313,71 +316,4 @@ def main():
 
 
 if __name__ == "__main__":
-    is_exit = False
-    while is_exit is False:
-        print('|-----------------------------------------------|')
-        print('|-------       tool youtube linux        -------|')
-        print('|-0. Thoát chương trình                  -------|')
-        print('|-1. Chỉnh sửa danh sách chrome youtube  -------|')
-        print('|-2. Chạy youtube                        -------|')
-
-        input_data = input("Nhập chọn chức năng: ")
-        func = int(input_data)
-        if func == 1:
-            while func == 1:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                folder_youtubes = os.path.join(base_dir, './youtubes')
-                if not os.path.exists(folder_youtubes):
-                    os.makedirs(folder_youtubes)
-                folders = [
-                    name for name in os.listdir(folder_youtubes)
-                    if os.path.isdir(os.path.join(folder_youtubes, name))
-                ]
-                print('|-----------------------------------------------|')
-                print('|---   Chỉnh sửa danh sách chrome youtube   ----|')
-                print('|- DANH SÁCH YOUTUBE:                    -------|')
-                if (folders.__len__() > 0):
-                    print(folders)
-                else:
-                    print('Trống vui lòng thêm youtube mới')
-                print('|-0. Quay lại                            -------|')
-                print('|-1. Thêm youtube mới (nhập 1-name)      -------|')
-                print('|-2. Xóa youtube (nhập 2-name)           -------|')
-                print('|-3. xác minh danh tính (nhập 3-name)    -------|')
-                func1 = input("Nhập chọn chức năng: ")
-
-                if (' ' in func1):
-                    print('lỗi cú pháp, không được chứa dấu cách')
-                elif func1 == 0 or func1 == '0':
-                    func = 'exit'
-                elif func1.startswith("1-"):
-                    text = func1[2:]
-                    if (folders is not None and folders.__len__() > 0 and any(item == text for item in folders)):
-                        print('đã tồn tại chrome youtube này rồi')
-                    else:
-                        open_chrome_to_edit(
-                            f'{folder_youtubes}/{text}', chrome_driver)
-                elif func1.startswith("2-"):
-                    text = func1[2:]
-                    if (folders is not None and folders.__len__() > 0 and any(item == text for item in folders)):
-                        try:
-                            shutil.rmtree(f"{folder_youtubes}/{text}")
-                        except:
-                            print('')
-                    else:
-                        print('Không thể xóa vì chưa tồn tại chrome youtube này')
-                elif func1.startswith("3-"):
-                    text = func1[2:]
-                    if (folders is not None and folders.__len__() > 0 and any(item == text for item in folders)):
-                        check_identity_verification(
-                            f'{folder_youtubes}/{text}')
-                    else:
-                        print('Chưa tồn tại trình duyệt này')
-
-        elif func == 2:
-            freeze_support()
-            main()
-        elif func == 0:
-            is_exit = True
-        else:
-            print('Thoát thành công')
+    main()
