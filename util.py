@@ -1,14 +1,5 @@
-import MetaTrader5 as mt5
-import os
-import re
-from PIL import Image, ImageDraw, ImageFont
-import imageio
-from moviepy import AudioFileClip, concatenate_videoclips, VideoFileClip, ImageClip
-import subprocess
-from datetime import datetime, timedelta, timezone
-import pandas as pd
+from mega import Mega
 import pyperclip
-
 import time
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
@@ -19,771 +10,40 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-def connect_to_mt5(login, password, server, terminal):
-    mt5.initialize(path= terminal, login= login,password= password,server= server)
+import urllib.parse
+from pymongo import MongoClient
 
-def get_candles_simple(symbol: str, timeframe: int, n_candles: int = 180) -> list:
-    if not mt5.initialize():
-        raise Exception(f"Không thể khởi tạo MT5: {mt5.last_error()}")
+def get_first_video_info():
+    username = urllib.parse.quote_plus("hoangdev161201_db_user")
+    password = urllib.parse.quote_plus("dAmGyKqEEo18HrK1")
+    uri = f"mongodb+srv://{username}:{password}@cluster0.tmmhbkx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    
+    client = None
+    try:
+        # 1. Khởi tạo kết nối
+        client = MongoClient(uri)
+        db = client["trade-yt"]
+        collection = db["info"]
 
-    if not mt5.symbol_select(symbol, True):
-        mt5.shutdown()
-        raise Exception(f"Không thể chọn symbol: {symbol}")
+        # 2. Lấy ra bản ghi đầu tiên trong collection
+        data = collection.find_one()
 
-    rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n_candles)
-    mt5.shutdown()
+        if data:
+            # Xóa trường '_id' của MongoDB nếu bạn chỉ muốn lấy dữ liệu thuần
+            data.pop("_id", None)
+            print("-> Đã lấy thành công dữ liệu từ MongoDB!")
+            return data
+        else:
+            print("-> Collection 'info' đang rỗng, không có dữ liệu.")
+            return None
 
-    if rates is None or len(rates) == 0:
-        raise Exception("Không có dữ liệu được trả về.")
-
-    df = pd.DataFrame(rates)
-    df['time'] = df['time'].astype(int)
-
-    result = []
-    for i, row in df.iterrows():
-        result.append({
-            "time": int(row['time']),
-            "tick_volume": int(row['tick_volume']),
-            "time_readable": datetime.utcfromtimestamp(int(row['time'])).strftime('%Y-%m-%d %H:%M:%S'),
-            "open": float(row['open']),
-            "close": float(row['close']),
-            "high": float(row['high']),
-            "low": float(row['low'])
-        })
-
-    return result
-def get_old_candels(file_path):
-    if os.path.exists(file_path):
-        data = []
-        # Mở file với mã hóa UTF-8 (hoặc mã hóa phù hợp)
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:  # Sử dụng 'utf-8' và bỏ qua lỗi
-            lines = f.readlines()
-
-        for line in lines:
-            
-            line = line.strip()  # Xóa ký tự thừa (newline, space)
-            if line:
-                line = str(line)
-                line = re.sub(r'[^\x20-\x7E]', '', line)
-                parts = line.split("-")
-                if len(parts) == 9:
-                    try:
-                        item = {
-                            "time": int(parts[0]),
-                            'time_readable': datetime.utcfromtimestamp(int(parts[0])).strftime('%Y-%m-%d %H:%M:%S'),
-                            "open": float(parts[1]),
-                            "close": float(parts[2]),
-                            "high": float(parts[3]),
-                            "low": float(parts[4]),
-                            "bollinger_band_upper": float(parts[5]),
-                            "bollinger_band_middle": float(parts[6]),
-                            "bollinger_band_lower": float(parts[7]),
-                            "tick_volume": float(parts[8])
-                        }
-                        data.append(item)
-                    except ValueError:
-                        print(f"Lỗi dữ liệu dòng: {line}")
-
-        # Nếu có dữ liệu hợp lệ, trả về mảng, nếu không trả về None
-        return data if data else None
-    else:
-        print("File không tồn tại.")
+    except Exception as e:
+        print(f"Lỗi khi đọc dữ liệu từ MongoDB: {e}")
         return None
-    
-
-
-def generate_introduce_content( symbol, time_frame_big, time_frame_tiny, name_channel):
-    print("tạo phần giới thiệu cho video")
-    return generate_content(f"""
-        tôi có kênh youtube tên là {name_channel}, chuyên phân tích forex, cung cấp tín hiệu mua hoặc bán và xu hướng giá đi trong tương lai.
-        hôm nay tôi đang làm video về phân tích {symbol} với khung thời gian {time_frame_big} và {time_frame_tiny}.
-        bạn hãy tạo ra câu chào, hoặc giới thiệu, kêu gọi đăng ký,... hấp dẫn, thân thiện, câu từ đừng quá lố  trước khi đi vào phân tích cho tôi.
-        để tôi có thể làm phần nói đầu tiên trong video của mình. bạn chỉ cần trả ra kết quả, bằng tiếng anh, không cần nói gì thêm.
-    """)
-
-def generate_support_resistance(old_candles, time_frame, low, high, symbol):
-    print(f'bắt đầu tạo hỗ trợ và kháng cự khung {time_frame}')
-
-    prompt_base = f"""{old_candles}
-    Đây là thông tin của các cây nến (bao gồm cả thông tin Bollinger Bands) khung {time_frame} của {symbol}.
-    Áp dụng phương pháp price action, vui lòng trả lời cho tôi 1 vùng support và 1 vùng resistance tốt nhất.
-
-    Yêu cầu:
-    - Support phải dưới giá {low}, resistance phải trên giá {high}.
-    - Hai vùng **không được gần nhau**: khoảng cách giữa **giá trên của support** và **giá dưới của resistance** phải **ít nhất bằng 1.5% giá hiện tại**.
-    - Ưu tiên vùng có **nhiều lần chạm lại (touchback)** hoặc **đi ngang (sideway accumulation)** rõ ràng.
-    - Không chọn vùng ngay sát nhau như “đè lên”.
-    - Mỗi vùng nên bao phủ **ít nhất 2 cây nến quan trọng** (có thân lớn hoặc bóng dài).
-    
-    ❗❗❗ RẤT QUAN TRỌNG:
-    - KHÔNG TRẢ DƯỚI DẠNG JSON, KHÔNG TRẢ DƯỚI DẠNG DANH SÁCH, KHÔNG TRẢ DƯỚI DẠNG OBJECT.
-    - CHỈ TRẢ VỀ **chuỗi văn bản duy nhất**, theo đúng định dạng:
-    <type>-<giá trên>-<giá dưới>-<time1>-<time2>-<high price from time1 to time2>-<low price from time1 to time2>-<lý do>
-    - Không có ký tự nào khác, không có dấu ngoặc, không xuống dòng thừa.
-    - Nếu có 2 vùng (support và resistance), trả mỗi vùng trên 1 dòng, không bọc JSON.
-
-    Yêu cầu chi tiết:
-    - type: phải là "support" hoặc "resistance", viết thường.
-    - time1, time2: là **UNIX timestamp (ví dụ: 1761867900)**, không được viết chữ, không định dạng ngày giờ.
-    - high price from time1 to time2 và low price from time1 to time2: là giá cao nhất và thấp nhất trong khoảng đó.
-    - lý do: phải dài ít nhất 250 ký tự, viết bằng tiếng Anh, giải thích logic tại sao vùng đó hình thành (không được ghi trực tiếp giá, mà phải nói kiểu “from price to price”), không cần nêu hướng trade.
-    - bắt buộc phải trả ra kết quả
-    """
-
-    content = generate_content(prompt_base)
-
-    return content
-
-def generate_trendline(old_candles, time_frame, symbol):
-    print('bắt đầu tạo trendline')
-
-    # Prompt template
-    prompt_template = f"""
-    {old_candles}
-    Đây là dữ liệu nến (bao gồm cả thông tin Bollinger Bands) của {symbol} với khung thời gian {time_frame}.
-
-    Dựa trên phân tích Price Action, hãy tìm **1 trendline duy nhất** thoả điều kiện sau:
-
-    ### Yêu cầu bắt buộc:
-    - trendline phải được vẽ gần với giá hiện tại (ưu tiên cây nến cuối cùng, rất quan trọng).
-    - chỉ sử dụng dữ liệu tôi cung cấp, không được dự đoán tương lai.
-    - nếu giá đi ngang hoặc không tìm được đường thỏa điều kiện trên thì trả về `null`.
-    - trendline phải gần sát với giá hiện tại trong cây nến cuối cùng mà tôi cung cấp: {old_candles[-1]}.
-
-    ### Kết quả trả về:
-    ❗❗❗ RẤT QUAN TRỌNG:
-    - KHÔNG TRẢ DƯỚI DẠNG JSON, KHÔNG TRẢ DƯỚI DẠNG DANH SÁCH, KHÔNG TRẢ DƯỚI DẠNG OBJECT.
-    - CHỈ TRẢ VỀ **chuỗi văn bản duy nhất**, theo đúng định dạng:
-    trendline-<price1>-<price2>-<time1>-<time2>
-    - Không có ký tự nào khác, không có dấu ngoặc, không xuống dòng thừa.
-    Trả **chính xác 1 dòng duy nhất**
-
-    ### Quy định định dạng:
-    - tất cả viết thường, không có chữ hoa.
-    - không xuống dòng, không thêm dấu chấm, dấu phẩy hay ký tự nào khác ngoài dấu gạch ngang (-).
-    - <time1> và <time2> phải là **UNIX timestamp** (ví dụ: 1761867900), tuyệt đối không được viết dạng ngày/giờ.
-    - chỉ trả kết quả duy nhất, không có mô tả, không có lời giải thích.
-    """
-    
-    content = generate_content(prompt_template)
-
-
-  
-
-    return content
-
-
-def generate_fibonacci(old_candles, time_frame, suport_resitances, trend_line, symbol):
-    print('bắt đầu tạo fibonacci')
-
-    # Prompt template
-    prompt_template = f"""
-    {old_candles}
-    Đây là dữ liệu nến (bao gồm cả thông tin Bollinger Bands) của {symbol} với khung thời gian {time_frame}, được cấu hình theo định dạng:
-    <type>-<giá trên>-<giá dưới>-<time1>-<time2>-<high price from time1 to time2>-<low price from time1 to time2>-<lý do>
-    (type là support hoặc resistance, time1 và time2 là bằng chứng).
-
-    Các vùng support và resistance: {suport_resitances}.
-    Đường trendline của khung lớn hơn: {trend_line}.
-
-    Dựa trên phân tích Price Action và các dữ liệu tôi cung cấp, hãy xác định thông tin **fibonacci** phù hợp để phục vụ việc trade.
-
-    ### Kết quả trả về:
-    Chỉ trả đúng **1 dòng duy nhất**, theo định dạng:
-    `fibonacci-<price1>-<price2>-<time1>-<time2>`
-
-    ### Quy định bắt buộc:
-    - tất cả viết thường, không viết hoa, không có ký tự nào khác ngoài dấu gạch ngang (-).
-    - không xuống dòng, không khoảng trắng đầu hoặc cuối.
-    - <time1> và <time2> phải là **UNIX timestamp** (ví dụ: 1761867900), tuyệt đối không được viết dạng ngày/giờ.
-    - fibonacci phải hợp lý và tiềm năng, dựa trên cấu trúc giá hiện tại.
-    - nếu xu hướng được phân tích là tăng → price1 < price2.
-    - nếu xu hướng được phân tích là giảm → price1 > price2.
-    - fibonacci phải gần với giá của cây nến cuối cùng (ưu tiên cao nhất).
-    - nếu không thể xác định được fibonacci hợp lệ thì trả về `null`.
-
-    **Chỉ trả kết quả duy nhất, không kèm lời giải thích hoặc mô tả.**
-    """
-
-    # Gọi song song 5 lần generate_content
-    content = generate_content( prompt_template)
-    return content
-
-
-def generate_result_future(old_candles, old_candles2, time_frame, time_frame2, suport_resitances, suport_resitances2, trend_line, fibonacci, symbol):
-    print('bắt đầu tạo dự đoán tương lai')
-
-    # Prompt template
-    prompt_template = f"""
-    {old_candles}
-    Đây là dữ liệu nến (bao gồm cả thông tin Bollinger Bands) của {symbol} với khung thời gian {time_frame}, được cấu hình:
-    <type>-<giá trên>-<giá dưới>-<time1>-<time2>-<high price from time1 to time2>-<low price from time1 to time2>-<lý do không dưới 100 ký tự> (type là support hoặc resistance, time1 time2 là bằng chứng).
-    các vùng support và resitance của {time_frame}: {suport_resitances}.
-    tiếp theo {old_candles2} Đây là dữ liệu nến (bao gồm cả thông tin Bollinger Bands) của {symbol} với khung thời gian {time_frame2}.
-    các vùng support và resitance của {time_frame2}: {suport_resitances2}.
-    thông tin fibonacci: {fibonacci}.
-    thông tin Trendline: {trend_line}.
-    Dựa trên phân tích Price Action, tick_volume, trendline, fibonacci, bollinger_band và các dữ liệu mà tôi cung cấp, hãy cung cấp giá sẽ đi như thế nào trong tương lai cho tôi để có thể vẽ đường line:
-
-    ### Kết quả trả về:
-    trả ra nhiều dự đoán theo định dạng:
-    `future-<price1>-<price2>-<price3>-...-<priceN>-<lý do dài trên 250 ký tự, trả lời bằng tiếng anh, nêu lý do sao cho hay, tự nhiên, để tôi có thể generate ra voice để đăng lên youtube>
-
-    ### Yêu cầu bắt buộc:
-    - price1 phải bắt đầu từ giá hiện tại là {old_candles[-1]['close']}.
-    - phải có nhiều điểm giá để vẽ ZigZag.
-    - Phải có ít nhất 4 điểm giá (price1 đến price4 trở lên).
-    - Tối đa chỉ được có 6 điểm giá (price1 đến price6).
-    - Các điểm giá nên dao động lên xuống để phản ánh xu hướng thị trường.
-    - nếu price1 của fibonacci < price2 của fibonacci thì phân tích theo xu hướng tăng.
-    - nếu price1 của fibonacci > price2 của fibonacci thì phân tích theo xu hướng giảm.
-    - bắt buộc phải cung cấp thông tin cho tôi, bao gồm:
-    - cân nhắc kỹ trước khi đưa ra quyết định.
-    - kết quả phải hợp lý và tiềm năng.
-
-    **Không giải thích, không thêm nội dung nào khác. không xuống dòng, đầu và cuối không có khoảng cách. không được viết hoa, viết thường hết.**
-    """
-
-  
-    prompts = generate_content( prompt_template)
-
-    # Gộp kết quả vào final prompt
-    final_prompt = f"""{old_candles} Đây là dữ liệu nến của {symbol} với khung thời gian {time_frame} phút. {old_candles2} Đây là dữ liệu nến của {symbol} với khung thời gian {time_frame2} phút. support and resistance: {suport_resitances} {suport_resitances2}. thông tin của fibonacci: {fibonacci}.
-    thông tin dự đoán tương lai giá sẽ đi: {prompts}.
-    Hãy lọc ra 1 dự đoán nào tiềm năng, lặp lại nhiều và hợp lý nhất và có thể dựa vào đó để trade trong các gợi ý trên. trả ra đúng định dạng:
-    future-<price1>-<price2>-<price3>-...-<priceN>-<lý do, lấy lại lý do mà tôi đã cung cấp>.
-    price1 phải bắt đầu từ giá hiện tại là {old_candles[old_candles.__len__() - 1]['close']}.
-    Không thêm bất kỳ lời giải thích hay chú thích nào khác.
-    """
-
-    return generate_content(final_prompt)
-
-
-
-def generate_bearish_or_bullish(content):
-    print('bắt đầu phân biejt là tăng hay giảm')
-
-    # Prompt template
-    prompt_template = f"""
-    tôi có dự toán tương lại như sau: {content}.
-    bạn phải cho tôi biết dự đoán này là tăng hay giảm, nếu tăng thì bạn trả ra là bullish, còn nếu giảm thì trả ra là bearish.
-
-    **Không giải thích, không thêm nội dung nào khác. không xuống dòng, đầu và cuối không có khoảng cách. không được viết hoa, viết thường hết. chỉ ghi là bullish hoặc bearish**
-    """
-
-    content = generate_content( prompt_template)
-    return content
-
-
-
-
-
-def create_transition_gif(image1_path, image2_path, output_path, steps=10, duration=5):
-    print('tạo gif')
-    img1 = Image.open(image1_path).convert("RGBA")
-    img2 = Image.open(image2_path).convert("RGBA")
-    img2 = img2.resize(img1.size)
-
-    frames = []
-
-    # Fade out image1
-    for i in range(steps + 1):
-        alpha = 255 - int((i / steps) * 255)
-        faded = img1.copy()
-        faded.putalpha(alpha)
-
-        frame = img2.copy()
-        frame.paste(faded, (0, 0), faded)
-        frames.append(frame)
-
-    # Fade in image1
-    for i in range(steps + 1):
-        alpha = int((i / steps) * 255)
-        faded = img1.copy()
-        faded.putalpha(alpha)
-
-        frame = img2.copy()
-        frame.paste(faded, (0, 0), faded)
-        frames.append(frame)
-
-    # Convert frames to a format that imageio can handle
-    frames = [frame.convert("RGB") for frame in frames]
-
-    # Save as GIF using imageio
-    imageio.mimsave(output_path, frames, duration=duration / 1000, loop=0)
-
-def extract_data_future_number_or_reason(text, change_name=None, is_reason=False):
-    parts = text.split('-')
-    result = []
-    reason = ''
-
-    if parts[0].startswith("future"):
-        # Đổi tên nếu có yêu cầu
-        result.append(str(change_name) if change_name is not None else parts[0])
-        
-        for i in range(1, len(parts)):
-            try:
-                float(parts[i])  # kiểm tra nếu là số (gồm cả float)
-                result.append(parts[i])
-            except ValueError:
-                # Khi gặp phần không phải số thì đó là lý do (reason)
-                reason = '-'.join(parts[i:])
-                break
-
-    if is_reason:
-        return reason.strip()
-
-    # Dùng str(x) để tránh lỗi khi join nếu có phần tử không phải str
-    return '-'.join([str(x) for x in result])
-
-import asyncio
-import edge_tts
-async def text_to_speech(
-    text: str,
-    output_file: str = "output.mp3",
-    voice: str = "en-US-BrianNeural",
-):
-    communicate = edge_tts.Communicate(
-        text,
-        voice,
-    )
-    await communicate.save(output_file)
-    
-
-def check_draw_done(file_path, text):
-    if not os.path.exists(file_path):
-        return False
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
-        first_line = file.readline().strip()
-        first_line = re.sub(r'[^\x20-\x7E]', '', first_line)
-        return text.strip().lower() in first_line.strip().lower()
-    
-
-def generate_voice_data(introduce_content, reason_contents, future_reason, folder_audio):
-    print('bắt đầu tạo voice')
-    asyncio.run(text_to_speech(introduce_content, f'{folder_audio}/intro.mp3'))
-    for index, item in enumerate(reason_contents):
-        asyncio.run(text_to_speech(item, f'{folder_audio}/reason-{index + 1}.mp3'))
-    asyncio.run(text_to_speech(future_reason, f'{folder_audio}/future-price.mp3'))
-
-
-def combine_image_audios(image_paths, audio_paths, intro_path,  output_path):
-    clip_intro = VideoFileClip(intro_path)
-    clip_intro = clip_intro.resized((1920, 1080))
-    clips = [clip_intro]
-
-   
-
-    for image_path, audio_path in zip(image_paths, audio_paths):
-        image_clip = ImageClip(image_path).resized((1920, 1080))
-        audio_clip = AudioFileClip(audio_path)
-
-        image_clip = image_clip.with_duration(audio_clip.duration)
-        video_clip = image_clip.with_audio(audio_clip)
-
-        clips.append(video_clip)
-
-    # Nối tất cả các video clip lại
-    final_clip = concatenate_videoclips(clips).resized((1920, 1080))
-
-    # Xuất video ra file
-    final_clip.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
-
-def create_video_from_gif_and_audio(gif_path, audio_path, output_path):
-    """
-    Ghép ảnh GIF động và âm thanh thành video với độ dài chính xác bằng âm thanh, đồng thời chuẩn hóa video.
-    """
-    # Dùng context manager để tự động đóng audio_clip
-    with AudioFileClip(audio_path) as audio_clip:
-        duration = audio_clip.duration
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-stream_loop", "-1",
-        "-i", gif_path,
-        "-i", audio_path,
-        "-t", str(duration),
-        "-c:v", "libx264",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "44100",
-        "-ac", "2",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        "-vf", "fps=30,format=yuv420p",
-        "-af", "aresample=async=1",
-        "-preset", "fast",
-        "-crf", "23",
-        "temp_video.mp4"
-    ]
-
-    try:
-        subprocess.run(cmd, check=True)
-        print("✅ Video tạm đã được tạo: temp_video.mp4")
-
-        normalize_video("temp_video.mp4", output_path)
-        print(f"✅ Video đã được chuẩn hóa và lưu tại: {output_path}")
-
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Lỗi khi tạo video: {e}")
 
     finally:
-        if os.path.exists("temp_video.mp4"):
-            os.remove("temp_video.mp4")
-
-def create_video_from_image_and_audio(image_path, audio_path, output_path):
-    """
-    Ghép hình ảnh và âm thanh thành video với độ dài chính xác bằng âm thanh, đồng thời chuẩn hóa video.
-    """
-    audio_clip = AudioFileClip(audio_path)
-    duration = audio_clip.duration
-
-    cmd = [
-        "ffmpeg",
-        "-y",                           # Ghi đè file nếu tồn tại
-        "-loop", "1",                    # Lặp hình ảnh
-        "-framerate", "30",              # Đặt frame rate cố định
-        "-i", image_path,                # Đầu vào hình ảnh
-        "-i", audio_path,                # Đầu vào âm thanh
-        "-t", str(duration),             # Đặt độ dài video bằng độ dài của âm thanh
-        "-c:v", "libx264",               # Mã hóa video với codec x264
-        "-tune", "stillimage",           # Tối ưu hóa cho hình ảnh tĩnh
-        "-c:a", "aac",                   # Mã hóa âm thanh với codec AAC
-        "-b:a", "192k",                  # Bitrate âm thanh
-        "-ar", "44100",                  # Tần số mẫu âm thanh
-        "-ac", "2",                      # 2 kênh âm thanh
-        "-pix_fmt", "yuv420p",           # Định dạng màu video
-        "-movflags", "+faststart",       # Đảm bảo video có thể phát ngay lập tức
-        "-vf", "fps=30,format=yuv420p",  # Tạo video với frame rate và định dạng chuẩn
-        "-af", "aresample=async=1",      # Chuẩn hóa âm thanh
-        "-preset", "fast",               # Tối ưu hóa tốc độ
-        "-crf", "23",                    # Chất lượng video (lower = tốt hơn)
-        output_path
-    ]
-
-    try:
-        subprocess.run(cmd, check=True)
-        print(f"Video đã được tạo thành công: {output_path}")
-    except subprocess.CalledProcessError as e:
-        print(f"Đã xảy ra lỗi trong quá trình tạo video: {e}")
-
-
-
-def normalize_video(input_path, output_path):
-    """
-    Chuẩn hóa video để concat ổn định.
-
-    - Video: H264
-    - FPS: 30
-    - Pixel format: yuv420p
-    - Audio: AAC 44.1kHz stereo
-    - Reset timestamp
-    - Không dùng -vsync vì FFmpeg mới đã bỏ option này
-    """
-
-    command = [
-        "ffmpeg",
-        "-y",
-
-        "-i", input_path,
-
-        # =========================
-        # VIDEO
-        # =========================
-        "-map", "0:v:0",
-
-        "-vf",
-        "fps=30,format=yuv420p",
-
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-
-        # =========================
-        # AUDIO
-        # =========================
-        "-map", "0:a:0?",
-
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "44100",
-        "-ac", "2",
-
-        "-af",
-        "aresample=async=1:first_pts=0",
-
-        # =========================
-        # TIMESTAMP
-        # =========================
-        "-avoid_negative_ts", "make_zero",
-
-        output_path
-    ]
-
-    print(f"Đang normalize: {input_path}")
-
-    try:
-        subprocess.run(
-            command,
-            check=True
-        )
-
-        print(f"Normalize OK: {output_path}")
-
-    except subprocess.CalledProcessError as e:
-        print(f"Lỗi normalize video: {input_path}")
-        raise e
-
-
-def concat_videos_ffmpeg(intro_path, video_paths, output_path):
-    """
-    Normalize intro + tất cả video rồi concat.
-
-    Các video được encode cùng:
-    - H264
-    - 30 FPS
-    - yuv420p
-    - AAC
-    - 44.1kHz
-    - stereo
-
-    Sau đó concat bằng stream copy.
-    """
-
-    if not video_paths:
-        print("Danh sách video rỗng.")
-        return
-
-    # ==========================================
-    # INTRO
-    # ==========================================
-
-    base_dir = os.path.dirname(
-        os.path.abspath(__file__)
-    )
-
-    intro_path = os.path.join(
-        base_dir,
-        "public",
-        "intro.mp4"
-    )
-
-    if not os.path.exists(intro_path):
-        raise FileNotFoundError(
-            f"Không tìm thấy intro: {intro_path}"
-        )
-
-    # ==========================================
-    # TEMP DIRECTORY
-    # ==========================================
-
-    temp_dir = os.path.join(
-        base_dir,
-        "temp_normalized"
-    )
-
-    os.makedirs(
-        temp_dir,
-        exist_ok=True
-    )
-
-    normalized_files = []
-
-    try:
-
-        # ==========================================
-        # 1. NORMALIZE INTRO
-        # ==========================================
-
-        normalized_intro = os.path.join(
-            temp_dir,
-            "normalized_intro.mp4"
-        )
-
-        normalize_video(
-            intro_path,
-            normalized_intro
-        )
-
-        normalized_files.append(
-            normalized_intro
-        )
-
-        # ==========================================
-        # 2. NORMALIZE VIDEO
-        # ==========================================
-
-        for index, video_path in enumerate(video_paths):
-
-            if not os.path.exists(video_path):
-                print(
-                    f"Bỏ qua video không tồn tại: "
-                    f"{video_path}"
-                )
-                continue
-
-            normalized_path = os.path.join(
-                temp_dir,
-                f"normalized_{index:04d}.mp4"
-            )
-
-            normalize_video(
-                video_path,
-                normalized_path
-            )
-
-            normalized_files.append(
-                normalized_path
-            )
-
-        # ==========================================
-        # CHECK
-        # ==========================================
-
-        if len(normalized_files) <= 1:
-            print(
-                "Không có video để concat."
-            )
-            return
-
-        # ==========================================
-        # 3. CREATE CONCAT FILE
-        # ==========================================
-
-        concat_file = os.path.join(
-            temp_dir,
-            "concat.txt"
-        )
-
-        with open(
-            concat_file,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            for path in normalized_files:
-
-                abs_path = os.path.abspath(
-                    path
-                ).replace("\\", "/")
-
-                # Escape dấu '
-                abs_path = abs_path.replace(
-                    "'",
-                    "'\\''"
-                )
-
-                f.write(
-                    f"file '{abs_path}'\n"
-                )
-
-        # ==========================================
-        # 4. OUTPUT DIRECTORY
-        # ==========================================
-
-        output_dir = os.path.dirname(
-            os.path.abspath(output_path)
-        )
-
-        if output_dir:
-            os.makedirs(
-                output_dir,
-                exist_ok=True
-            )
-
-        # ==========================================
-        # 5. CONCAT
-        # ==========================================
-
-        command = [
-            "ffmpeg",
-            "-y",
-
-            "-f", "concat",
-            "-safe", "0",
-
-            "-i", concat_file,
-
-            "-c", "copy",
-
-            "-avoid_negative_ts",
-            "make_zero",
-
-            output_path
-        ]
-
-        print("Đang concat video...")
-
-        subprocess.run(
-            command,
-            check=True
-        )
-
-        print(
-            f"Đã nối xong video: {output_path}"
-        )
-
-    except subprocess.CalledProcessError as e:
-
-        print(
-            f"Lỗi FFmpeg khi concat: {e}"
-        )
-
-        raise e
-
-    finally:
-
-        # ==========================================
-        # 6. CLEAN TEMP
-        # ==========================================
-
-        if os.path.exists(temp_dir):
-
-            for filename in os.listdir(temp_dir):
-
-                file_path = os.path.join(
-                    temp_dir,
-                    filename
-                )
-
-                try:
-
-                    if os.path.isfile(
-                        file_path
-                    ):
-                        os.remove(
-                            file_path
-                        )
-
-                except Exception as e:
-
-                    print(
-                        f"Không thể xóa "
-                        f"{file_path}: {e}"
-                    )
-
-            try:
-                os.rmdir(temp_dir)
-
-            except Exception:
-                pass #     os.remove(normalized_intro_path)
-
-
-def create_rounded_mask(size, radius):
-    mask = Image.new("L", size, 0)
-    draw = ImageDraw.Draw(mask)
-    draw.rounded_rectangle((0, 0, size[0], size[1]), radius=radius, fill=255)
-    return mask
-
-def format_utc_time_range(days: int = 7) -> str:
-    dt_start = datetime.now(timezone.utc)
-    dt_end = dt_start + timedelta(days=days)
-
-    start_str = dt_start.strftime("%d/%m")
-    end_str = dt_end.strftime("%d/%m/%Y")
-
-    return f"{start_str} - {end_str}"
+        if client:
+            client.close()
 
 def check_exist_video_hd(browser):
     timeout = 20 * 60
@@ -805,6 +65,97 @@ def check_exist_video_hd(browser):
     if is_not_find_status is True:
         browser.quit()
         raise Exception("lỗi upload youtube")
+
+
+
+def get_file_from_mega(folder_mega, folder_output_path):
+    mega = Mega()
+    m = mega.login("hoangdev161201@gmail.com", "Cuem1612@")
+
+    files = m.get_files()
+
+    node_id_found = None
+    for node_id, node in files.items():
+        # t == 1 là thư mục
+        if node["t"] == 1 and node["a"]["n"] == folder_mega:
+            node_id_found = node_id
+            continue
+        if node_id_found and node['p'] == node_id_found:
+            try:
+                m.download((node_id, node), folder_output_path)
+                time.sleep(3)
+            except:
+                time.sleep(3)
+                
+    if not node_id_found:
+        m.create_folder(folder_mega)
+    else:
+        m.delete(node_id_found)
+        m.empty_trash()
+        m.create_folder(folder_mega)
+
+
+        
+def upload_files_to_mega(folder_mega, files_path):
+    mega = Mega()
+    m = mega.login("hoangdev161201@gmail.com", "Cuem1612@")
+    files = m.get_files()
+
+    node_id_found = None
+    for node_id, node in files.items():
+        # t == 1 là thư mục
+        if node["t"] == 1 and node["a"]["n"] == folder_mega:
+            node_id_found = node_id
+            break
+                
+    if not node_id_found:
+        m.create_folder(folder_mega)
+    else:
+        m.delete(node_id_found)
+        m.empty_trash()
+        m.create_folder(folder_mega)
+    
+    node_id_found = None
+    while True:
+        files = m.get_files()
+        for node_id, node in files.items():
+            if node["t"] == 1 and node["a"]["n"] == folder_mega:
+                node_id_found = node_id
+                break
+        if node_id_found:
+            break
+        
+    
+    for file in files_path:
+        m.upload(file, node_id_found)
+        
+def count_files_in_mega_folder(folder_mega):
+    mega = Mega()
+    m = mega.login("hoangdev161201@gmail.com", "Cuem1612@")
+
+    files = m.get_files()
+
+    folder_id = None
+
+    # Tìm folder
+    for node_id, node in files.items():
+        if node["t"] == 1 and node["a"]["n"] == folder_mega:
+            folder_id = node_id
+            break
+
+    if not folder_id:
+        print(f"Không tìm thấy folder: {folder_mega}")
+        return 0
+
+    # Đếm file trực tiếp trong folder
+    count = 0
+
+    for node_id, node in files.items():
+        if node.get("p") == folder_id and node["t"] == 0:
+            count += 1
+
+    return count
+
     
 def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbnail, comment=None, is_not_wait_check=False):
     # dùng để tạo ra 1 user
@@ -1139,324 +490,3 @@ def trim_keywords_to_limit(keywords_str, limit=400):
 
     return ",".join(result)
 
-
-def create_thumbnail(
-    background_path: str,
-    overlay_path: str,
-    output_path: str = "result.jpg",
-    left: int = 0,
-    top: int = 0,
-    overlay_size: tuple | None = None,
-    opacity: float = 1.0,
-    border_radius: int = 0,
-    symbol: str | None = None,
-    day: str | None = None,
-    des: str | None = None,
-):
-    # Mở ảnh
-    bg = Image.open(background_path).convert("RGBA")
-    ol = Image.open(overlay_path).convert("RGBA")
-
-    # Resize nếu có
-    if overlay_size:
-        ol = ol.resize(overlay_size)
-
-    # Bo góc nếu có
-    if border_radius > 0:
-        mask = Image.new("L", ol.size, 0)
-        draw_mask = ImageDraw.Draw(mask)
-        draw_mask.rounded_rectangle([(0, 0), ol.size], radius=border_radius, fill=255)
-        ol.putalpha(mask)
-
-    # Giảm độ trong suốt nếu có
-    if opacity < 1.0:
-        alpha = ol.getchannel("A")
-        alpha = alpha.point(lambda p: int(p * opacity))
-        ol.putalpha(alpha)
-
-    # Dán overlay lên background
-    bg.paste(ol, (left, top), ol)
-
-    # Nếu có text thì tự động chèn vào giữa overlay
-    if symbol:
-        draw = ImageDraw.Draw(bg)
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        font_path = os.path.join(base_dir, './public/inter/Inter_28pt-Bold.ttf')
-        font = ImageFont.truetype(font_path, size=190)
-
-        text_x = 185
-        text_y = 505
-
-        # Viền mờ cho dễ đọc
-        shadow_offset = 2
-        draw.text((text_x + shadow_offset, text_y + shadow_offset), symbol, font=font, fill=(0, 0, 0))
-        draw.text((text_x, text_y), symbol, font=font, fill=(255, 255, 255))
-
-    if des:
-        draw = ImageDraw.Draw(bg)
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        font_path = os.path.join(base_dir, './public/inter/Inter_28pt-SemiBold.ttf')
-        font = ImageFont.truetype(font_path, size=83)
-
-        # Vùng chứa text
-        box_x = 185
-        box_y = 895
-        box_width = 1670
-
-        # ✅ Tính kích thước chữ
-        try:
-            bbox = draw.textbbox((0, 0), des, font=font)
-            text_width = bbox[2] - bbox[0]
-        except AttributeError:
-            text_width, text_height = draw.textsize(des, font=font)
-
-        # ✅ Căn giữa theo chiều ngang
-        text_x = box_x + (box_width - text_width) // 2
-        text_y = box_y
-
-        # ✅ Viền mờ cho dễ đọc
-        shadow_offset = 2
-        draw.text((text_x + shadow_offset, text_y + shadow_offset), des, font=font, fill=(0, 0, 0))
-        draw.text((text_x, text_y), des, font=font, fill=(255, 255, 255))
-
-    if day:
-        draw = ImageDraw.Draw(bg)
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        font_path = os.path.join(base_dir, './public/inter/Inter_28pt-SemiBold.ttf')
-        font = ImageFont.truetype(font_path, size=100)
-
-        # Vị trí khung chứa text
-        box_x = 190
-        box_y = 355
-        box_width = 748
-
-        # ✅ Tính kích thước chữ
-        try:
-            bbox = draw.textbbox((0, 0), day, font=font)
-            text_width = bbox[2] - bbox[0]
-        except AttributeError:
-            text_width, text_height = draw.textsize(day, font=font)
-
-        # ✅ Căn giữa theo chiều ngang trong khung 748px
-        text_x = box_x + (box_width - text_width) // 2
-        text_y = box_y
-
-        # ✅ Viền mờ cho dễ đọc
-        shadow_offset = 2
-        draw.text((text_x + shadow_offset, text_y + shadow_offset), day, font=font, fill=(0, 0, 0))
-        draw.text((text_x, text_y), day, font=font, fill=(0, 0, 0))
-
-    # Lưu ảnh
-    bg.convert("RGB").save(output_path)
-    print(f"✅ Ảnh đã lưu tại: {output_path} (tọa độ: left={left}, top={top})")
-
-
-def open_chrome_to_edit(yt_path, driver_path="C:/Program Files/Google/Chrome/Application/chrome.exe"):
-    user_data_dir = yt_path
-    process = subprocess.Popen(
-        [driver_path, f'--remote-debugging-port=9223', f'--user-data-dir={user_data_dir}'])
-    input('nhấn bất kì để đóng chrome:')
-    process.terminate()  # gửi tín hiệu terminate
-    try:
-        process.wait(timeout=30)  # đợi chrome tắt
-    except subprocess.TimeoutExpired:
-        process.kill()  # nếu không tắt thì kill hẳn là sao không hiểu
-        
-        
-def check_identity_verification(yt_path):
-    try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        video_path = f"{base_dir}/public/intro.mp4"
-        thumb_path = f"{base_dir}/public/thumbnail-price-action.png"
-        user_data_dir = yt_path
-
-        # Tạo đối tượng ChromeOptions
-        chrome_options = Options()
-
-        # Chỉ định đường dẫn đến thư mục user data
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-        user_data_dir_abspath = os.path.abspath(user_data_dir)
-        chrome_options.add_argument(f"user-data-dir={user_data_dir_abspath}")
-        # Nếu bạn muốn sử dụng profile mặc định
-        chrome_options.add_argument("profile-directory=Default")
-        # chrome_options.add_argument("--headless")  # Chạy trong chế độ không giao diện
-        # chrome_options.add_argument("--disable-gpu")  # Tắt GPU (thường dùng trong môi trường máy chủ)
-
-        # Sử dụng Service để chỉ định ChromeDriver
-        service = Service(ChromeDriverManager().install())
-
-        # Khởi tạo WebDriver với các tùy chọn
-        browser = webdriver.Chrome(service=service, options=chrome_options)
-
-        browser.get("https://studio.youtube.com/")
-        # await browser load end
-        element = WebDriverWait(browser, 100).until(
-            EC.element_to_be_clickable(
-                (By.XPATH, '//ytcp-button[@icon="yt-sys-icons:video_call"]'))
-        )
-        element.click()
-        time.sleep(1)
-
-        WebDriverWait(browser, 100).until(
-            EC.element_to_be_clickable((By.ID, 'text-item-0'))
-        )
-
-        browser.find_element(By.ID, 'text-item-0').click()
-        time.sleep(10)
-
-        # upload video
-        print('upload video in youtube')
-        # chờ tối đa 100 giây cho ít nhất 2 input xuất hiện
-        WebDriverWait(browser, 100).until(
-            lambda d: d.find_elements(By.TAG_NAME, 'input') if len(
-                d.find_elements(By.TAG_NAME, 'input')) > 1 else False
-        )
-        file_input = browser.find_elements(By.TAG_NAME, 'input')[1]
-        file_input.send_keys(video_path)
-        time.sleep(3)
-
-        # upload thumbnail
-        print('upload thumbnail in youtube')
-        WebDriverWait(browser, 10).until(
-            EC.visibility_of_element_located((By.ID, 'file-loader'))
-        )
-        thumbnail_input = browser.find_element(By.ID, 'file-loader')
-        thumbnail_input.send_keys(thumb_path)
-        time.sleep(3)
-    except:
-        print('error')
-
-    input('nhấn bất kì để đóng chrome:')
-    browser.quit()
-    
-    
-    
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-# AI-----------------------------------------------------
-
-import requests
-import sys
-import time
-
-
-OPENCODE_URL = "http://127.0.0.1:36726"
-
-
-def check_opencode():
-    """
-    Kiểm tra OpenCode server có đang chạy không.
-    """
-    try:
-        response = requests.get(
-            f"{OPENCODE_URL}/global/health",
-            timeout=5
-        )
-
-        if response.status_code == 200:
-            data = response.json()
-
-            if data.get("healthy"):
-                print("OpenCode đang chạy.")
-                print("Version:", data.get("version"))
-                return True
-
-    except requests.RequestException:
-        pass
-
-    return False
-
-
-def create_session():
-    """
-    Tạo một session mới trong OpenCode.
-    """
-
-    response = requests.post(
-        f"{OPENCODE_URL}/session",
-        json={},
-        timeout=30
-    )
-
-    response.raise_for_status()
-
-    data = response.json()
-
-    return data["id"]
-
-
-def generate_content(prompt):
-    """
-    Gửi prompt tới OpenCode và lấy content trả về.
-    """
-
-    session_id = create_session()
-
-    print("Session:", session_id)
-    print("Đang yêu cầu OpenCode sinh content...")
-
-    response = requests.post(
-        f"{OPENCODE_URL}/session/{session_id}/message",
-        json={
-            "parts": [
-                {
-                    "type": "text",
-                    "text": prompt
-                }
-            ]
-        },
-        timeout=300
-    )
-
-    response.raise_for_status()
-
-    data = response.json()
-
-    return extract_text(data)
-
-
-def extract_text(data):
-    """
-    Cố gắng lấy text từ response của OpenCode.
-    """
-
-    # Một số version/API có thể trả parts
-    if isinstance(data, dict):
-        # response trực tiếp có parts
-        parts = data.get("parts")
-        if isinstance(parts, list):
-            texts = []
-            for part in parts:
-                if not isinstance(part, dict):
-                    continue
-
-                if part.get("type") == "text":
-                    text = part.get("text")
-
-                    if text:
-                        texts.append(text)
-
-            if texts:
-                return "\n".join(texts)
-
-        # response nằm trong message
-        message = data.get("message")
-        if isinstance(message, dict):
-            parts = message.get("parts")
-            if isinstance(parts, list):
-                texts = []
-                for part in parts:
-                    if not isinstance(part, dict):
-                        continue
-                    if part.get("type") == "text":
-                        text = part.get("text")
-                        if text:
-                            texts.append(text)
-                if texts:
-                    return "\n".join(texts)
-    return str(data)

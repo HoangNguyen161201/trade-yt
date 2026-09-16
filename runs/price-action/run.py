@@ -1,4 +1,4 @@
-from util import generate_bearish_or_bullish, create_thumbnail, trim_keywords_to_limit, format_utc_time_range, generate_content, upload_yt, connect_to_mt5, get_old_candels, create_video_from_gif_and_audio, create_video_from_image_and_audio, concat_videos_ffmpeg, check_draw_done, generate_voice_data, extract_data_future_number_or_reason, generate_introduce_content, create_transition_gif, generate_support_resistance, generate_result_future, generate_trendline, generate_fibonacci
+from util import save_video_info, generate_bearish_or_bullish, create_thumbnail, trim_keywords_to_limit, format_utc_time_range, generate_content, upload_yt, connect_to_mt5, get_old_candels, create_video_from_gif_and_audio, create_video_from_image_and_audio, concat_videos_ffmpeg, check_draw_done, generate_voice_data, extract_data_future_number_or_reason, generate_introduce_content, create_transition_gif, generate_support_resistance, generate_result_future, generate_trendline, generate_fibonacci
 import MetaTrader5 as mt5
 import re
 from concurrent.futures import ProcessPoolExecutor
@@ -11,7 +11,8 @@ import shutil
 import glob
 from data import account, symbols, name_channel
 from data import terminal, folder_path, txt_path, info_candle_m15_path, info_candle_m1_path, picture1_path, picture2_path
-
+from mega_func import upload_files_to_mega
+from openpyxl import Workbook
 
 def main():
     is_start = True
@@ -270,33 +271,23 @@ def main():
                                  folder_video}/{title_slug}.mp4')
 
             # viết vào file txt
-            lines = [
-                f"{title}\n",
-                f"{description}\n",
-                f"{tags}\n"
-            ]
-            if os.path.exists("data.txt"):
-                print("File đã tồn tại, xóa dữ liệu cũ...")
-            with open("data.txt", "w", encoding="utf-8") as file:
-                file.writelines(lines)
-            print("Đã ghi dữ liệu mới!")
-            
-            
+            save_video_info(title, description, tags)
+            upload_files_to_mega('price-action', [f'{folder_video}/{title_slug}.mp4', f'{folder_video}/thumbnail.png'])
             # upload video ------------------------------------------
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            folder_youtubes = os.path.join(base_dir, './youtubes')
-            folders = [
-                name for name in os.listdir(folder_youtubes)
-                if os.path.isdir(os.path.join(folder_youtubes, name))
-            ]
-            upload_yt(
-                f'{folder_youtubes}/{folders[0]}',
-                title,
-                description,
-                tags,
-                f'{folder_video}/{title_slug}.mp4',
-                thumbnail_output,
-            )
+            # base_dir = os.path.dirname(os.path.abspath(__file__))
+            # folder_youtubes = os.path.join(base_dir, './youtubes')
+            # folders = [
+            #     name for name in os.listdir(folder_youtubes)
+            #     if os.path.isdir(os.path.join(folder_youtubes, name))
+            # ]
+            # upload_yt(
+            #     f'{folder_youtubes}/{folders[0]}',
+            #     title,
+            #     description,
+            #     tags,
+            #     f'{folder_video}/{title_slug}.mp4',
+            #     thumbnail_output,
+            # )
             
 
             end_time = time.time()
@@ -305,7 +296,7 @@ def main():
             if index_symbol >= symbols.__len__():
                 print('đã đăng đủ video trong hôm nay đợi qua ngày mai')
                 index_symbol = 0
-                time.sleep((24 - symbols.__len__()) * 360)
+                time.sleep(5 * 60 * 60)
             print(f"Đợi 1 tiếng để đăng tiếp")
             time.sleep(360)
 

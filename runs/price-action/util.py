@@ -1124,6 +1124,25 @@ def upload_yt(user_data_dir, title, description, tags, video_path, video_thumbna
     browser.quit()
 
 
+
+def trim_keywords_to_limit(keywords_str, limit=400):
+    keywords = [kw.strip() for kw in keywords_str.split(',')]
+    result = []
+    total_length = 0
+
+    for kw in keywords:
+        kw_len = len(kw)
+        # Cộng thêm 1 cho dấu phẩy nếu đã có từ trước
+        if result:
+            kw_len += 1
+        if total_length + kw_len <= limit:
+            result.append(kw)
+            total_length += kw_len
+        else:
+            break
+
+    return ",".join(result)
+
 def create_thumbnail(
     background_path: str,
     overlay_path: str,
@@ -1329,7 +1348,7 @@ import sys
 import time
 
 
-OPENCODE_URL = "http://127.0.0.1:36726"
+OPENCODE_URL = "http://127.0.0.1:61562"
 
 
 def check_opencode():
@@ -1444,3 +1463,54 @@ def extract_text(data):
                 if texts:
                     return "\n".join(texts)
     return str(data)
+
+
+
+
+
+
+# data
+import urllib.parse
+from pymongo import MongoClient
+
+def save_video_info(title: str, description: str, tags: str) -> bool:
+    """
+    Kết nối MongoDB Atlas, xóa dữ liệu cũ trong collection 'info' và thêm dữ liệu mới.
+    """
+    # 1. Cấu hình & Kết nối bên trong hàm
+    username = urllib.parse.quote_plus("hoangdev161201_db_user")
+    password = urllib.parse.quote_plus("dAmGyKqEEo18HrK1")
+    uri = f"mongodb+srv://{username}:{password}@cluster0.tmmhbkx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    
+    client = None
+    try:
+        # Khởi tạo kết nối
+        client = MongoClient(uri)
+        db = client["trade-yt"]
+        collection = db["info"]
+
+        # 2. Xóa tất cả bản ghi cũ trong collection 'info'
+        delete_result = collection.delete_many({})
+        print(f"-> Đã dọn dẹp {delete_result.deleted_count} bản ghi cũ.")
+
+        # 4. Tạo document và chèn dữ liệu mới
+        data = {
+            "title": title,
+            "description": description,
+            "tags": tags,
+            "status": "pending"
+        }
+        
+        insert_result = collection.insert_one(data)
+        print(f"-> Đã lưu mới thành công với ID: {insert_result.inserted_id}")
+        return True
+
+    except Exception as e:
+        print(f"Lỗi khi xử lý MongoDB: {e}")
+        return False
+
+    finally:
+        # 5. Đóng kết nối an toàn
+        if client:
+            client.close()
+            
